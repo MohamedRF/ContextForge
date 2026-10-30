@@ -368,8 +368,10 @@ This is a separately authorized repository-maintenance task; it does not start P
 - [x] Ignore downloaded tools, builds, source caches, local credentials/editor files, original local prompt, obsolete license notes and machine-specific bootstrap script without deleting them.
 - [x] Verify local format, Clippy, 22 tests and release build with locked dependencies; validate workflow with actionlint 1.7.12.
 - [x] Verify the documented source-install command using an isolated local install. `cargo install --path crates/contextforge-cli --root .tools/product-install --locked` passed; installed binary reports `contextforge 0.1.0`.
-- [ ] Review staged file list for local artifacts/secrets and commit as MohamedRF <soft-arch@ots.annauniv.edu>.
-- [ ] Create public `MohamedRF/ContextForge`, push `main`, and verify the remote commit.
+- [x] Review staged file list for local artifacts/secrets and commit as MohamedRF <soft-arch@ots.annauniv.edu>. Initial commit `fc789ca6b3b37f80e97fe5d598cde651d6d2afbb`; 35 source/documentation/config files; local notes and generated artifacts excluded.
+- [x] Create public `MohamedRF/ContextForge`, push `main`, and verify the remote commit. https://github.com/MohamedRF/ContextForge; public visibility, default branch main and MIT detection verified through GitHub API; origin/main matches the initial commit.
 - [ ] Inspect actual GitHub CI results; fix confirmed failures or record external blockers without claiming unrun checks passed.
 
 Publication preparation evidence: all four local Cargo quality gates passed with `--locked` where applicable; actionlint 1.7.12 accepted the workflow; `git diff --cached --check`, staged credential-pattern scan and artifact-exclusion checks passed. Git author configured locally as requested; global Git settings untouched.
+
+Initial GitHub CI run `41013732878`: Linux and Windows passed; macOS correctly rejected a linked ancestor in the external-cache test fixture (`/var` alias). Fixed the fixture to select the canonical authorized cache, preserving all isolation assertions, and added a Unix-only linked-cache rejection regression. No production safety policy was weakened. Local Windows format/tests (22)/Clippy/release gates pass after the fixture correction; cross-platform rerun remains pending.

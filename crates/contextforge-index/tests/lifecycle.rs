@@ -132,7 +132,10 @@ fn external_cache_isolates_repositories_and_status_is_read_only() {
     let (first, _) = setup();
     let (second, _) = setup();
     for temp in [&first, &second] {
-        let path_literal = cache.path().to_str().unwrap().replace('\\', "/");
+        // macOS temporary paths can include /var -> /private/var. Select the
+        // canonical authorized cache, retaining the no-linked-metadata policy.
+        let canonical_cache = fs::canonicalize(cache.path()).unwrap();
+        let path_literal = canonical_cache.to_str().unwrap();
         fs::write(
             temp.path().join(".contextforge/config.toml"),
             format!("index_root = '{path_literal}'\n"),
@@ -179,6 +182,25 @@ fn fixture_baseline_and_source_integrity() {
         warm_elapsed.as_millis(),
         fs::metadata(database(temp.path())).unwrap().len()
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn linked_external_cache_is_rejected_without_writes() {
+    let (temp, _) = setup();
+    let outside = tempfile::tempdir().unwrap();
+    let canonical_root = fs::canonicalize(temp.path()).unwrap();
+    let linked_cache = canonical_root.join("linked-cache");
+    std::os::unix::fs::symlink(outside.path(), &linked_cache).unwrap();
+    fs::write(
+        temp.path().join(".contextforge/config.toml"),
+        format!("index_root = '{}'\n", linked_cache.to_str().unwrap()),
+    )
+    .unwrap();
+    let repo = Repository::open(Some(temp.path()), temp.path()).unwrap();
+    assert!(status(&repo).is_err());
+    assert!(index(&repo).is_err());
+    assert_eq!(fs::read_dir(outside.path()).unwrap().count(), 0);
 }
 
 #[test]

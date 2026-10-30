@@ -4,6 +4,8 @@
 
 Cache path is `<index_root>/<sha256(native-canonical-root)>/index.sqlite`. A relative index root is beneath `.contextforge`; an absolute root explicitly selects external metadata storage. Canonical root identity is platform-local, not a portable repository identifier. Moving a repository creates a different cache namespace. Repository identity is also checked inside the database.
 
+External cache paths must have no linked ancestors. Use the canonical directory path when your system provides aliases, such as macOS `/var` pointing to `/private/var`. This keeps cache-path validation consistent with the no-linked-metadata policy.
+
 SQLite uses bundled SQLite through rusqlite 0.41.1, parameter-bound values, a 2-second busy timeout and `trusted_schema=OFF`. Every update uses one immediate transaction. Source discovery and reads happen before that transaction. All eligible files are read and SHA-256 hashed; only added/changed records are written. No timestamp-only shortcut can miss a same-length edit. Deleted/ignored/renamed files lose obsolete rows (rename is delete+add). This is incremental database writing, not incremental source reading or parsing.
 
 Schema 1: `repository(singleton, identity)` and `files(path, language, fingerprint, content, bytes)`. Paths are relative. `PRAGMA user_version=1`; only an empty version-0 database migrates to 1, transactionally. Unknown versions/nonempty unknown schemas/corrupt databases fail without being deleted or rebuilt. Future symbols/relations/FTS need explicit migrations, not placeholder tables. Existing database contents are local cached evidence, not trusted operational instructions.
