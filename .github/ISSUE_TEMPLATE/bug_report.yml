@@ -1,0 +1,34 @@
+name: Bug report
+description: Report reproducible incorrect behavior in an implemented feature.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic examples. Do not include secrets, private source, or source caches. Report vulnerabilities through SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Include the commit hash and operating system.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Provide commands and the smallest reproducible fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include sanitized output and exit status.
+    validations:
+      required: true

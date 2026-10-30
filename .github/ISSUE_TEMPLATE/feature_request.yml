@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose a concrete improvement or developer use case.
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What task are you trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include expected inputs and outputs where helpful.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and roadmap relevance
+      description: Check docs/roadmap.md for work already planned.
