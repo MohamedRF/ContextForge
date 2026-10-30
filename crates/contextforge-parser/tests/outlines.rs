@@ -192,6 +192,25 @@ fn identities_survive_line_shifts_and_bodies_but_change_for_rename_path_or_repo(
 }
 
 #[test]
+fn analyze_normalizes_native_nested_paths_to_repository_relative_evidence() {
+    let temp = tempfile::tempdir().unwrap();
+    let directory = temp.path().join("源 files");
+    fs::create_dir(&directory).unwrap();
+    let source = "pub fn café() {}\n";
+    fs::write(directory.join("example.rs"), source).unwrap();
+    let repo = Repository::open(Some(temp.path()), temp.path()).unwrap();
+    let outline = analyze(&repo, &Path::new("源 files").join("example.rs"), 10).unwrap();
+    assert_eq!(outline.path, "源 files/example.rs");
+    assert_eq!(outline.symbols[0].name, "café");
+    assert_spans(&outline, source);
+    assert_eq!(
+        fs::read_to_string(directory.join("example.rs")).unwrap(),
+        source
+    );
+    assert!(!temp.path().join(".contextforge").exists());
+}
+
+#[test]
 fn repository_policy_and_changed_source_are_enforced_without_writes() {
     let temp = tempfile::tempdir().unwrap();
     fs::write(temp.path().join("a.rs"), "fn old() {}").unwrap();

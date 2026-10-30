@@ -113,14 +113,16 @@ pub fn analyze(repository: &Repository, path: &Path, limit: usize) -> Result<Out
     }
     let relative = path.to_str().ok_or(Error::Ineligible)?;
     #[cfg(windows)]
-    let relative = relative.replace('\\', "/");
+    let normalized = relative.replace('\\', "/");
+    #[cfg(windows)]
+    let relative = normalized.as_str();
     let map = repository.project_map(1000)?;
     if !map.files.iter().any(|file| file.path == relative) {
         return Err(Error::Ineligible);
     }
     let source = repository.read_source(path)?;
     let repository_id = digest(repository.root().as_os_str().as_encoded_bytes());
-    parse_source(&repository_id, relative.as_ref(), &source, limit)
+    parse_source(&repository_id, relative, &source, limit)
 }
 
 /// Parse supplied UTF-8 evidence with a stable repository ID and relative file path.
