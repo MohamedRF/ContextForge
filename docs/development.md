@@ -6,7 +6,7 @@ Prerequisites: Git, Rust 1.99.1 with rustfmt/Clippy, and a native C compiler/lin
 - Linux: install your distribution's C compiler and linker/build tools.
 - macOS: install the Xcode command-line build tools.
 
-The baseline host was Windows x86_64 with a complete MinGW GCC 16.2 POSIX/SEH/MSVCRT toolchain. CI is configured for Windows, Linux and macOS; check the actual workflow results before claiming platform support. Machine-specific bootstrap scripts and downloaded toolchains are not distributed in this repository.
+The baseline host was Windows x86_64 with a complete MinGW GCC 16.2 POSIX/SEH/MSVCRT toolchain. Format, Clippy, tests and release builds also passed on the Windows, Linux and macOS GitHub runners in [run 41014286004](https://github.com/MohamedRF/ContextForge/actions/runs/41014286004). Packaged release installations remain unverified. Machine-specific bootstrap scripts and downloaded toolchains are not distributed in this repository.
 
 Fetching/building dependencies may require network access; the application runtime does not. Keep `Cargo.lock` committed for reproducible application builds. Never commit build artifacts, local caches, or credentials.
 

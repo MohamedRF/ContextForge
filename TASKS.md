@@ -240,7 +240,7 @@
 
 **Goal:** Ensure changes remain safe and testable.
 
-- [ ] CI: format, Clippy, tests, build on supported platforms.
+- [x] CI: format, Clippy, tests, build on supported platforms. GitHub Actions run 41014286004 passed on ubuntu-latest, windows-latest and macos-latest for source revision 8acb134933c3d977338c6907f32bf9ca98640bdf.
 - [ ] Add database migration and index lifecycle regression tests.
 - [ ] Add MCP contract tests and failure-mode tests.
 - [ ] Add property/fuzz tests around risky parsers, paths, graphs and JSON boundaries when practical.
@@ -273,14 +273,14 @@
 
 **Goal:** A useful and credible repository that invites adoption and contributions.
 
-- [ ] README: clear problem/solution, demo, installation, supported platforms/languages, limitations.
-- [ ] README: architecture, feature matrix, CLI and MCP tool examples.
+- [x] README: clear problem/solution, demo, installation, supported platforms/languages, limitations. Current capabilities and unreleased status stated explicitly; source install smoke-tested locally.
+- [x] README: architecture, feature matrix, CLI and MCP tool examples.
 - [ ] README: Claude Code, Codex, Cursor, VS Code integration instructions (verified status shown).
-- [ ] Include sample repositories/test fixtures and safe demo workflows.
-- [ ] Include real benchmark results with reproduction steps and no invented savings.
-- [ ] `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `CHANGELOG.md`, issue/PR templates.
-- [ ] Document high-value beginner and advanced contribution opportunities.
-- [ ] Review all docs for unsupported feature promises and stale command examples.
+- [x] Include sample repositories/test fixtures and safe demo workflows. Synthetic temporary fixtures and the documented init/index/reindex workflow.
+- [x] Include real benchmark results with reproduction steps and no invented savings. Single-sample limits and debug environment documented.
+- [x] `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `CHANGELOG.md`, issue/PR templates.
+- [x] Document high-value beginner and advanced contribution opportunities.
+- [x] Review all docs for unsupported feature promises and stale command examples. Phase 3+ features remain marked planned; local documentation links and source install verified.
 - [ ] Prepare first public release checklist and obtain approval before publishing.
 
 **Gate:** A new developer can build, install, configure, exercise an MCP tool and understand limitations from the README alone.
@@ -301,7 +301,7 @@
 | Token budget | Estimator plus serialization overhead tests | Not tested |
 | MCP compatibility | Actual client initialize → list → call | PASS: official SDK client; harness-specific installs NOT RUN |
 | Prompt-injection resilience | Malicious comments treated as data | Not tested |
-| Cross-platform support | Build + smoke tests per advertised OS | Windows x86_64 PASS; Linux/macOS NOT RUN |
+| Cross-platform support | Build + smoke tests per advertised OS | PASS: format/Clippy/tests/release builds on Windows, Linux and macOS CI; packaged installs remain unverified |
 | Release claims | Reproducible benchmark and install evidence | Not tested |
 
 ## Validation Log
@@ -322,6 +322,10 @@
 | 2026-10-30 | Binary smoke | Release binary `--version`, fixture `init`, two `index` runs, `status`, `doctor`; source SHA-256 comparison | PASS | First index added 1; second unchanged 1; ready schema 1; source unchanged; fixtures stored under ignored .tools/ |
 | 2026-10-30 | Optional checks | `cargo audit`, `cargo deny check`, Linux/macOS builds, real harness installations, network-disabled execution | NOT RUN | Audit/deny absent from `cargo --list`; no other-platform runners or harness installation performed; network disabling not attempted |
 | 2026-10-30 | Final review | Full new source/manifest/docs review; `git diff --check`; instruction file hashes | PASS | No commits, pushes, publications or external editor settings changes; generated artifacts remain ignored |
+| 2026-10-30 | Repository publication | Locked Cargo format/Clippy/tests/release; isolated source install; actionlint; staged-file review and local link checks | PASS | 22 Windows behavior tests; installed binary reports contextforge 0.1.0; 23 local documentation links valid |
+| 2026-10-30 | GitHub publication | Create public MohamedRF/ContextForge, push main, verify remote SHA/visibility/license | PASS | Initial commit fc789ca6b3b37f80e97fe5d598cde651d6d2afbb authored as requested; MIT detected by GitHub |
+| 2026-10-30 | Initial CI | GitHub Actions run 41013732878 | FAIL, resolved | Linux/Windows passed; macOS external-cache fixture used a linked /var ancestor. Canonicalized the fixture and added Unix linked-cache rejection coverage, preserving the production safety policy |
+| 2026-10-30 | Cross-platform CI | GitHub Actions run 41014286004 | PASS | Windows, Linux, macOS: format, Clippy with warnings denied, tests, release builds all passed at source revision 8acb134933c3d977338c6907f32bf9ca98640bdf |
 
 ## Decisions Log
 
@@ -350,10 +354,10 @@
 
 ## Current Session Handoff
 
-- **Current milestone:** Phases 0–2 complete; feature development remains stopped at Phase 2. Owner subsequently authorized professional repository presentation and public GitHub publication under MohamedRF with MIT licensing.
+- **Current milestone:** Phases 0–2 complete; feature development remains stopped at Phase 2. Professional repository presentation and owner-authorized public MIT GitHub publication completed at https://github.com/MohamedRF/ContextForge.
 - **Completed:** Root/config/CLI, bounded ignore-aware discovery, official stdio MCP inventory, transactional versioned incremental SQLite source index, lifecycle/security regression tests and measured fixture baseline.
 - **Files changed:** Cargo workspace/lock/toolchain, crates/contextforge-{core,index,cli}, docs, README/contribution/security/changelog/LICENSE documents, GitHub workflow/templates, .gitignore/.gitattributes and this tracker. Original AGENTS.md and local PROMPT.md preserved; local prompt/bootstrap tools/obsolete license notes excluded from publication.
-- **Validation:** Format, Clippy, 22 tests, release build, official SDK MCP test, abrupt-writer recovery test and release CLI smoke PASS; optional audits/other OS/harness installations NOT RUN as detailed above.
+- **Validation:** Local Windows format/Clippy/22 tests/release/source install PASS. Official SDK MCP and abrupt-writer recovery tests PASS. GitHub CI format/Clippy/tests/release builds PASS on Windows, Linux and macOS (run 41014286004). Optional dependency audits, packaged release installs and harness installations remain NOT RUN.
 - **Open issues/security:** Cached freshness is explicitly unchecked; no parser/search yet; hostile concurrent filesystem replacement, hard-linked/hostile caches, query/entry resource hardening and harness validation remain documented limitations. No packaged release claim.
 - **Next task:** Phase 3 normalized Tree-sitter symbol model and first language adapter, only on a new instruction to continue. Do not start it in this session.
 - **Safety reminder:** Preserve user changes and require approval for destructive or externally visible actions.
@@ -370,8 +374,8 @@ This is a separately authorized repository-maintenance task; it does not start P
 - [x] Verify the documented source-install command using an isolated local install. `cargo install --path crates/contextforge-cli --root .tools/product-install --locked` passed; installed binary reports `contextforge 0.1.0`.
 - [x] Review staged file list for local artifacts/secrets and commit as MohamedRF <soft-arch@ots.annauniv.edu>. Initial commit `fc789ca6b3b37f80e97fe5d598cde651d6d2afbb`; 35 source/documentation/config files; local notes and generated artifacts excluded.
 - [x] Create public `MohamedRF/ContextForge`, push `main`, and verify the remote commit. https://github.com/MohamedRF/ContextForge; public visibility, default branch main and MIT detection verified through GitHub API; origin/main matches the initial commit.
-- [ ] Inspect actual GitHub CI results; fix confirmed failures or record external blockers without claiming unrun checks passed.
+- [x] Inspect actual GitHub CI results; fix confirmed failures or record external blockers without claiming unrun checks passed. [Run 41014286004](https://github.com/MohamedRF/ContextForge/actions/runs/41014286004) passed on all three platforms at source revision 8acb134933c3d977338c6907f32bf9ca98640bdf.
 
 Publication preparation evidence: all four local Cargo quality gates passed with `--locked` where applicable; actionlint 1.7.12 accepted the workflow; `git diff --cached --check`, staged credential-pattern scan and artifact-exclusion checks passed. Git author configured locally as requested; global Git settings untouched.
 
-Initial GitHub CI run `41013732878`: Linux and Windows passed; macOS correctly rejected a linked ancestor in the external-cache test fixture (`/var` alias). Fixed the fixture to select the canonical authorized cache, preserving all isolation assertions, and added a Unix-only linked-cache rejection regression. No production safety policy was weakened. Local Windows format/tests (22)/Clippy/release gates pass after the fixture correction; cross-platform rerun remains pending.
+Initial GitHub CI run `41013732878`: Linux and Windows passed; macOS correctly rejected a linked ancestor in the external-cache test fixture (`/var` alias). Fixed the fixture to select the canonical authorized cache, preserving all isolation assertions, and added a Unix-only linked-cache rejection regression. No production safety policy was weakened. Local Windows format/tests (22)/Clippy/release gates pass after the correction; cross-platform rerun `41014286004` passed on all three platforms. The final publication-record commit updates documentation only and skips redundant CI; it does not change the verified source or workflow.

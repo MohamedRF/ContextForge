@@ -41,7 +41,7 @@ ContextForge gives coding tools a repeatable view of a local source tree. It dis
 
 ## Quick start
 
-Prerequisites: [Rust](https://www.rust-lang.org/tools/install), Cargo, Git, and the native linker/build tools for your platform. The repository pins **Rust 1.99.1** and builds bundled SQLite, so a C compiler is required. Windows has been verified locally; Linux and macOS checks are configured in CI and should be assessed from the workflow results.
+Prerequisites: [Rust](https://www.rust-lang.org/tools/install), Cargo, Git, and the native linker/build tools for your platform. The repository pins **Rust 1.99.1** and builds bundled SQLite, so a C compiler is required. Format, Clippy, tests, and release builds have passed in CI on **Windows, Linux, and macOS**. See the [verified workflow run](https://github.com/MohamedRF/ContextForge/actions/runs/41014286004) and [latest CI results](https://github.com/MohamedRF/ContextForge/actions).
 
 ```sh
 git clone https://github.com/MohamedRF/ContextForge.git
