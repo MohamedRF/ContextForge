@@ -26,6 +26,8 @@ Thumbs.db
 Desktop.ini
 
 # Local development notes and machine-specific bootstrap helper
+/AGENTS.md
+/TASKS.md
 /PROMPT.md
 /LICENSE-STRATEGY.md
 /scripts/cargo-local.ps1

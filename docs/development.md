@@ -19,7 +19,7 @@ cargo build --workspace --release --locked
 
 Tests construct independent temporary repositories, including Unicode paths, invalid config, ignored/binary/oversized input, Windows junctions and Unix symlinks. CLI tests run the actual binary. MCP tests use the official SDK client over a child-process stdio transport with bounded test timeouts. No private source repositories or user harness configurations are needed.
 
-Run `cargo audit` / `cargo deny check` when installed; do not claim they ran if unavailable. Build/test each OS before adding platform claims. Follow AGENTS.md for reviews, focused changes and source-trust policy.
+Run `cargo audit` / `cargo deny check` when installed; do not claim they ran if unavailable. Build/test each OS before adding platform claims. Keep changes focused, review the full diff, and follow the [security model](security.md) when handling source content.
 
 ## Installing a local build
 

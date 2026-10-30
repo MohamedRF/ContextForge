@@ -1,6 +1,6 @@
 # Roadmap
 
-`TASKS.md` is the implementation/evidence ledger. This document describes release scope, not completed features.
+This document describes planned release scope. See the [README](../README.md) and [changelog](../CHANGELOG.md) for implemented behavior and the [security model](security.md) for unresolved hardening work.
 
 - v0.1: CLI/config/root policy; discovery and transactional incremental SQLite storage; Rust/Python/TypeScript/JavaScript Tree-sitter definitions; cited FTS5 search and symbol lookup; real stdio MCP calls; verified Claude Code and Codex manual registration documentation.
 - v0.2: typed evidence-qualified dependency graph, Git changed ranges and impact, token-budgeted context, persistent freshness and invalidation.

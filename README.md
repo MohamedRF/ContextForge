@@ -191,26 +191,10 @@ The workspace has seven crates: `contextforge-core` for root policy/discovery, `
 
 ## Validation and performance
 
-The Phase 2 Windows baseline passed **22 behavior tests**, formatting, Clippy with warnings denied, and a release build. Tests include Unicode paths, invalid config, ignore rules, path escapes, junctions, index lifecycle, transaction rollback, abrupt writer exit, and MCP protocol handling.
-
-The Phase 3/4 local Windows suite now covers **38 behavior tests**, including
-four-language syntax, schema migration, atomic syntax/FTS invalidation, literal
-query handling and all three MCP tools. New-source Linux/macOS verification and
-real harness installations remain pending.
-
-The Phase 5/6 suite extends this to **50 behavior tests**, including graph cycles,
-uncertainty/limits, historical ignore policy, Git snapshot modes and read-only
-official MCP client calls. These new changes have local Windows validation;
-other-platform checks remain pending.
-
-The Phase 7–10 local Windows suite passes **65 tests**, including budgeted
-CLI/MCP packages, persistent knowledge lifecycle, SQL resource limits and
-cancellation. Release smoke returns the two expected fixture files in 1340
-compact JSON bytes (335 estimated tokens); this is a tiny synthetic regression
-measurement, not a general token-savings claim. Remaining security/privacy
-gates and other-platform verification are listed in [TASKS.md](TASKS.md).
-
-A single diagnostic run over 100 generated Rust files measured **115 ms cold indexing**, **103 ms unchanged reindexing**, and **28 KiB of SQLite storage**, using a debug build on an Intel i7-7700 Windows host. This is a small fixture measurement, not a throughput or speedup claim. [Method, environment, and reproduction](docs/benchmarking.md).
+The test suite covers repository boundaries, incremental indexing, syntax parsing,
+search, dependency graphs, Git impact, context budgets, and MCP protocol behavior.
+See the [development guide](docs/development.md) for quality checks and
+[benchmark methodology](docs/benchmarking.md) for measurements and their limits.
 
 ## Security and limitations
 
@@ -224,7 +208,7 @@ Report vulnerabilities through the process in [SECURITY.md](SECURITY.md). For im
 
 Next work includes remaining security hardening and MVP harness verification, followed by setup helpers, measured benchmarks and release packaging. `memory status` validates observed source hashes; search/graph/context retain their explicit captured-snapshot contracts.
 
-See the [roadmap](docs/roadmap.md), [verified task tracker](TASKS.md), [changelog](CHANGELOG.md), and [contribution guide](CONTRIBUTING.md). Small, tested changes and reproducible bug reports are welcome.
+See the [roadmap](docs/roadmap.md), [changelog](CHANGELOG.md), and [contribution guide](CONTRIBUTING.md). Small, tested changes and reproducible bug reports are welcome.
 
 ## License
 
