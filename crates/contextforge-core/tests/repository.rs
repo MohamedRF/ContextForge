@@ -1,4 +1,47 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+#[test]
+fn historical_source_policy_respects_nested_ignores_absent_paths_and_boundaries() {
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::create_dir(temp.path().join("src")).unwrap();
+    std::fs::write(
+        temp.path().join(".gitignore"),
+        "ignored.rs\nprivate/\n!private/secret.rs\n",
+    )
+    .unwrap();
+    std::fs::write(temp.path().join("src/.contextforgeignore"), "hidden.py\n").unwrap();
+    let repo = contextforge_core::Repository::open(Some(temp.path()), temp.path()).unwrap();
+    for path in [
+        "ignored.rs",
+        "src/hidden.py",
+        "target/generated.rs",
+        ".contextforge/private.rs",
+        "notes.txt",
+        "private/secret.rs",
+    ] {
+        assert!(
+            !repo
+                .source_path_allowed(std::path::Path::new(path))
+                .unwrap(),
+            "{path}"
+        );
+    }
+    for path in ["deleted.rs", "src/absent.py"] {
+        assert!(
+            repo.source_path_allowed(std::path::Path::new(path))
+                .unwrap(),
+            "{path}"
+        );
+    }
+    assert!(
+        repo.source_path_allowed(std::path::Path::new("../outside.rs"))
+            .is_err()
+    );
+    assert!(
+        repo.source_path_allowed(&temp.path().join("outside.rs"))
+            .is_err()
+    );
+}
 use contextforge_core::Repository;
 use std::fs;
 use tempfile::tempdir;

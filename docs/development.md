@@ -1,6 +1,6 @@
 # Development
 
-Prerequisites: Git, Rust 1.99.1 with rustfmt/Clippy, and a native C compiler/linker for bundled SQLite. The root `rust-toolchain.toml` pins the compiler and components.
+Prerequisites: Git, Rust 1.99.1 with rustfmt/Clippy, and a native C compiler/linker for bundled SQLite and Tree-sitter grammars. The root `rust-toolchain.toml` pins the compiler and components.
 
 - Windows: use Visual Studio C++ Build Tools with the MSVC Rust target, or a complete compatible MinGW toolchain with the GNU target.
 - Linux: install your distribution's C compiler and linker/build tools.

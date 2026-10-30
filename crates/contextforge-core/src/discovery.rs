@@ -67,6 +67,87 @@ fn language(path: &Path) -> Option<&'static str> {
 }
 
 impl Repository {
+    /// Apply current source/ignore policy to a relative path, including absent historical files.
+    /// Does not read source contents or follow links; ancestor ignore files remain scoped.
+    pub fn source_path_allowed(&self, relative: &Path) -> Result<bool, Error> {
+        if relative.as_os_str().is_empty()
+            || relative
+                .components()
+                .any(|c| !matches!(c, std::path::Component::Normal(_)))
+        {
+            return Err(Error::InvalidRoot);
+        }
+        if language(relative).is_none() {
+            return Ok(false);
+        }
+        let path = self.root().join(relative);
+        let index_root = if self.config.index_root.is_absolute() {
+            self.config.index_root.clone()
+        } else {
+            self.root()
+                .join(".contextforge")
+                .join(&self.config.index_root)
+        };
+        if path.starts_with(index_root)
+            || relative
+                .components()
+                .any(|part| excluded_name(part.as_os_str().to_str().unwrap_or("")))
+        {
+            return Ok(false);
+        }
+        let configured = pattern_matcher(self.root(), &self.config.ignore_patterns)?;
+        if configured
+            .matched_path_or_any_parents(&path, false)
+            .is_ignore()
+        {
+            return Ok(false);
+        }
+        let mut builder = GitignoreBuilder::new(self.root());
+        let mut directory = self.root().to_path_buf();
+        let parents: Vec<_> = relative
+            .parent()
+            .unwrap_or(Path::new(""))
+            .components()
+            .collect();
+        if parents.len() > 63 {
+            return Err(Error::Discovery);
+        }
+        for position in 0..=parents.len() {
+            if position > 0 {
+                directory.push(parents[position - 1].as_os_str());
+                // A whitelisted leaf cannot resurrect a directory pruned by discovery.
+                if configured
+                    .matched_path_or_any_parents(&directory, true)
+                    .is_ignore()
+                    || builder
+                        .build()
+                        .map_err(|_| Error::Discovery)?
+                        .matched_path_or_any_parents(&directory, true)
+                        .is_ignore()
+                {
+                    return Ok(false);
+                }
+            }
+            if !crate::reject_link(&directory, true)? {
+                break;
+            }
+            validate_ignore_files(&directory)?;
+            for name in [".gitignore", ".contextforgeignore"] {
+                let ignore = directory.join(name);
+                if ignore.exists()
+                    && let Some(_error) = builder.add(ignore)
+                {
+                    return Err(Error::Discovery);
+                }
+            }
+        }
+        Ok(!builder
+            .build()
+            .map_err(|_| Error::Discovery)?
+            .matched_path_or_any_parents(&path, false)
+            .is_ignore())
+    }
+
     /// Maps at most 1000 UTF-8 source files, inspecting at most 10000 entries.
     /// Skips links/reparse points, binary data, non-UTF-8 paths/content and oversized files.
     pub fn project_map(&self, limit: usize) -> Result<ProjectMap, Error> {
@@ -99,18 +180,7 @@ impl Repository {
         let invalid_ignore_filter = invalid_ignore.clone();
         builder.filter_entry(move |entry| {
             let name = entry.file_name().to_str().unwrap_or("");
-            if matches!(
-                name,
-                ".git"
-                    | ".contextforge"
-                    | ".tools"
-                    | "node_modules"
-                    | "target"
-                    | "dist"
-                    | "build"
-                    | "__pycache__"
-                    | ".venv"
-            ) {
+            if excluded_name(name) {
                 return false;
             }
             if entry.path() == index_root {
@@ -208,4 +278,19 @@ impl Repository {
         }
         Ok(result)
     }
+}
+
+fn excluded_name(name: &str) -> bool {
+    matches!(
+        name,
+        ".git"
+            | ".contextforge"
+            | ".tools"
+            | "node_modules"
+            | "target"
+            | "dist"
+            | "build"
+            | "__pycache__"
+            | ".venv"
+    )
 }

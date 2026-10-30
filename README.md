@@ -19,7 +19,7 @@ A Rust CLI and MCP server for bounded source discovery and incremental local ind
 
 ContextForge gives coding tools a repeatable view of a local source tree. It discovers eligible files, stores source snapshots in SQLite, and updates changed records without executing project code. A stdio MCP server exposes a bounded source-file inventory to compatible clients.
 
-**Current stage:** discovery, storage, and the CLI/MCP foundation are implemented. Parsing, symbol lookup, full-text search, dependency graphs, and change-impact analysis are planned. This checkout is an unreleased development version; it is not the complete v0.1 MVP.
+**Current stage:** discovery, storage, Tree-sitter outlines, indexed search, bounded syntax graphs, read-only Git impact, token-budgeted context and persistent knowledge controls work through the Rust CLI; all seven retrieval tools are available over MCP. Call/import targets remain heuristic or unknown. Harness installation verification and further security hardening remain open. This checkout is an unreleased development version; it is not the complete v0.1 MVP.
 
 ## What works today
 
@@ -34,9 +34,12 @@ ContextForge gives coding tools a repeatable view of a local source tree. It dis
 | CLI, configuration, status, diagnostics | Implemented |
 | Source discovery and incremental SQLite snapshots | Implemented |
 | MCP `project_map` | Implemented; tested with the official Rust SDK client |
-| Tree-sitter symbols and outlines | Planned |
-| FTS5 search and symbol lookup | Planned |
-| Dependency graphs, Git impact, context packing | Planned |
+| Tree-sitter outlines and MCP `symbol_lookup` | Implemented; current-source file outlines |
+| FTS5 search and indexed exact/qualified symbol lookup | Implemented via CLI `search` and MCP `search_context` |
+| Bounded syntax dependency graphs and qualified references | Implemented; explicit heuristic/unknown targets |
+| Git changed ranges and likely impact | Implemented; old/new source evidence, no safety verdict |
+| Token-budgeted context packing | Implemented; explicit serialized JSON estimator |
+| Structural knowledge status/clear/rebuild | Implemented; hash validation and transactional lifecycle |
 | Harness setup helpers and prebuilt releases | Planned |
 
 ## Quick start
@@ -71,13 +74,13 @@ Initialization creates `.contextforge/config.toml`. Indexing stores source text 
 For a fixture containing one source file, the first index returns:
 
 ```json
-{"schema_version":1,"added":1,"modified":0,"unchanged":0,"deleted":0,"total_files":1}
+{"schema_version":2,"added":1,"modified":0,"unchanged":0,"deleted":0,"total_files":1,"parsed_files":1,"partial_files":0}
 ```
 
 Reindexing the unchanged fixture returns:
 
 ```json
-{"schema_version":1,"added":0,"modified":0,"unchanged":1,"deleted":0,"total_files":1}
+{"schema_version":2,"added":0,"modified":0,"unchanged":1,"deleted":0,"total_files":1,"parsed_files":0,"partial_files":0}
 ```
 
 Eligible files are read and hashed on each run. Only changed database rows are written. Renames are handled as deletion plus addition. Status reports `freshness: "not_checked"`; it does not assert that cached source still matches the working tree.
@@ -93,6 +96,13 @@ Eligible files are read and hashed on each run. Only changed database rows are w
 | `contextforge status` | Inspect configuration and stored index metadata |
 | `contextforge doctor` | Check root/config access, discovery, and index metadata |
 | `contextforge project-map --limit 100` | List eligible source files |
+| `contextforge analyze <relative-file> --limit 200` | Outline current source syntax |
+| `contextforge search <query> --limit 20 --offset 0` | Search indexed symbols, filenames and source text |
+| `contextforge graph <selector> --direction incoming --depth 2` | Explore bounded likely dependents in captured syntax |
+| `contextforge references <selector>` | Show candidate and unresolved references |
+| `contextforge impact [--staged\|--base <ref>\|--file <path>]` | Inspect Git changed code and likely impact |
+| `contextforge context <query> --budget 4000 [--git]` | Pack deduplicated cited source as budgeted compact JSON |
+| `contextforge memory <status\|clear\|rebuild>` | Validate or explicitly reset/rebuild local structural knowledge |
 | `contextforge mcp` | Start the stdio MCP server |
 
 Global options: `--root <directory>`, `--json`, and `--verbose`. Diagnostics go to stderr. In MCP mode, stdout is reserved for protocol messages.
@@ -116,7 +126,24 @@ Use these executable/argument values when configuring a stdio-capable MCP client
 
 This is a generic server launch descriptor, not a complete configuration file for any specific harness. Use the absolute executable path if the client's environment does not include Cargo's binary directory.
 
-The only exposed tool is **`project_map`**. It accepts an optional `limit` from 1 to 1000 and returns relative paths, language classifications, byte counts, and truncation metadata. It inventories files without creating or refreshing an index. Clients cannot override the server's root through tool arguments.
+The inventory tool is **`project_map`**. It accepts an optional `limit` from 1 to 1000 and returns relative paths, language classifications, byte counts, and truncation metadata. It inventories files without creating or refreshing an index. Clients cannot override the server's root through tool arguments.
+
+**`symbol_lookup`** returns a current-file syntax outline from a relative `path`.
+**`search_context`** searches an explicitly captured index with a literal `query`,
+optional `limit` and `offset`. Search returns cited snippets and fingerprints with
+unchecked snapshot freshness. See [search behavior](docs/search.md) and
+[syntax coverage](docs/parsing.md). Neither tool refreshes the index implicitly.
+
+**`dependency_graph`** and **`find_references`** expose the captured syntax graph.
+**`analyze_change`** inspects current Git snapshots without shell commands or
+metadata writes. See [graph certainty and limits](docs/graph.md) and
+[Git modes and impact evidence](docs/impact.md).
+
+**`pack_context`** accepts `query`, optional `budget` and opt-in `include_git`.
+It returns deduplicated source evidence within the named estimator's budget,
+including compact package JSON overhead. This is not exact model tokenization;
+the MCP envelope is outside that budget. See [context packing](docs/context.md)
+and [persistent knowledge commands](docs/memory.md).
 
 Initialize → list → call and clean EOF shutdown are tested with the official `rmcp` client and raw protocol tests. Claude Code, Codex, Cursor, and VS Code installation paths have not yet been verified. See the [MCP contract](docs/mcp-tools.md).
 
@@ -140,7 +167,7 @@ Relative index roots live beneath `.contextforge`; an absolute path selects exte
 | TypeScript | `.ts`, `.tsx` |
 | JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` |
 
-These are file classifications, not implemented syntax parsers. Discovery respects scoped `.gitignore`, `.contextforgeignore`, and configured exclusions. Binary data, invalid UTF-8, links, generated directories, and oversized files are skipped by policy.
+All four languages have Tree-sitter syntax outlines; see [parser coverage and limits](docs/parsing.md). Discovery respects scoped `.gitignore`, `.contextforgeignore`, and configured exclusions. Binary data, invalid UTF-8, links, generated directories, and oversized files are skipped by policy.
 
 Current index limits are **1000 eligible files**, **10000 yielded entries**, **depth 64**, and **64 MiB of snapshot text**. The default per-file limit is 1 MiB, configurable up to 16 MiB. A truncated inventory aborts indexing rather than deleting records from an incomplete scan. See [storage and privacy](docs/storage.md) for details.
 
@@ -152,15 +179,36 @@ flowchart LR
     MCP[MCP stdio adapter] --> Core
     Core --> Discovery[Bounded source discovery]
     CLI --> Index[Incremental index]
+    MCP --> Index
+    CLI --> Parser[Tree-sitter outlines]
+    MCP --> Parser
+    Index --> Parser
     Index --> Core
     Index --> SQLite[(Local SQLite snapshots)]
 ```
 
-The workspace has three crates: `contextforge-core` for root policy and discovery, `contextforge-index` for persistence, and `contextforge-cli` for commands and the MCP adapter. Domain code stays independent of the transport. Read the [architecture document](docs/architecture.md) for trust boundaries and design decisions.
+The workspace has seven crates: `contextforge-core` for root policy/discovery, `contextforge-index` for persistence/SQL search and knowledge lifecycle, `contextforge-parser` for syntax outlines, `contextforge-graph` for pure candidate graphs, `contextforge-git` for read-only snapshot impact, `contextforge-context` for budgeted retrieval and `contextforge-cli` for commands and MCP. Domain code stays independent of the transport. Read the [architecture document](docs/architecture.md) for trust boundaries and design decisions.
 
 ## Validation and performance
 
 The Phase 2 Windows baseline passed **22 behavior tests**, formatting, Clippy with warnings denied, and a release build. Tests include Unicode paths, invalid config, ignore rules, path escapes, junctions, index lifecycle, transaction rollback, abrupt writer exit, and MCP protocol handling.
+
+The Phase 3/4 local Windows suite now covers **38 behavior tests**, including
+four-language syntax, schema migration, atomic syntax/FTS invalidation, literal
+query handling and all three MCP tools. New-source Linux/macOS verification and
+real harness installations remain pending.
+
+The Phase 5/6 suite extends this to **50 behavior tests**, including graph cycles,
+uncertainty/limits, historical ignore policy, Git snapshot modes and read-only
+official MCP client calls. These new changes have local Windows validation;
+other-platform checks remain pending.
+
+The Phase 7–10 local Windows suite passes **65 tests**, including budgeted
+CLI/MCP packages, persistent knowledge lifecycle, SQL resource limits and
+cancellation. Release smoke returns the two expected fixture files in 1340
+compact JSON bytes (335 estimated tokens); this is a tiny synthetic regression
+measurement, not a general token-savings claim. Remaining security/privacy
+gates and other-platform verification are listed in [TASKS.md](TASKS.md).
 
 A single diagnostic run over 100 generated Rust files measured **115 ms cold indexing**, **103 ms unchanged reindexing**, and **28 KiB of SQLite storage**, using a debug build on an Intel i7-7700 Windows host. This is a small fixture measurement, not a throughput or speedup claim. [Method, environment, and reproduction](docs/benchmarking.md).
 
@@ -168,13 +216,13 @@ A single diagnostic run over 100 generated Rust files measured **115 ms cold ind
 
 Source code remains read-only; only explicitly managed metadata is written. There is no runtime network service or project-code execution. Source text is untrusted data, never operational instructions.
 
-The index contains source bodies and may therefore contain source-embedded secrets. Keep caches private. Filesystem race protection, hard-linked or hostile caches, cancellation, and resource hardening remain development work. Use local stdio and trusted cache locations; this is not a hardened remote service.
+The index contains source bodies and may therefore contain source-embedded secrets. Keep caches private. SQLite resource limits and cancellable MCP waits are implemented; native workers retain their permits until finished. Filesystem races, Windows cache hard links/ACL validation, strict peer/process quotas and hostile-cache hardening remain open. Use local stdio and trusted cache locations; see the [security model](docs/security.md).
 
 Report vulnerabilities through the process in [SECURITY.md](SECURITY.md). For implementation limits, see [storage](docs/storage.md) and [architecture](docs/architecture.md).
 
 ## Roadmap and contributing
 
-The next milestone is Tree-sitter symbol extraction, followed by indexed search and symbol lookup. Later work adds evidence-qualified dependencies, Git impact, token-budgeted context, harness integrations, and release packaging.
+Next work includes remaining security hardening and MVP harness verification, followed by setup helpers, measured benchmarks and release packaging. `memory status` validates observed source hashes; search/graph/context retain their explicit captured-snapshot contracts.
 
 See the [roadmap](docs/roadmap.md), [verified task tracker](TASKS.md), [changelog](CHANGELOG.md), and [contribution guide](CONTRIBUTING.md). Small, tested changes and reproducible bug reports are welcome.
 

@@ -1,6 +1,6 @@
 # Security
 
-This is an unreleased development build, not a hardened service. Use only local stdio. No telemetry, network service, source execution or source upload is implemented. Repository source contents are untrusted data. See docs/architecture.md for the filesystem threat model and remaining race/cancellation limits.
+This is an unreleased development build, not a hardened service. Use only local stdio. No telemetry, network service, source execution or source upload is implemented. Repository source contents are untrusted data. See [the security model](docs/security.md) for filesystem/cache/MCP trust boundaries, resource limits, cancellation behavior, permissions and remaining gaps.
 
 ## Reporting a vulnerability
 

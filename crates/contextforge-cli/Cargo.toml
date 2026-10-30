@@ -20,6 +20,10 @@ path = "src/main.rs"
 [dependencies]
 contextforge-core = { path = "../contextforge-core" }
 contextforge-index = { path = "../contextforge-index" }
+contextforge-parser = { path = "../contextforge-parser" }
+contextforge-graph = { path = "../contextforge-graph" }
+contextforge-git = { path = "../contextforge-git" }
+contextforge-context = { path = "../contextforge-context" }
 clap = { version = "4.6", features = ["derive"] }
 rmcp = { version = "3.8", default-features = false, features = ["server", "macros", "schemars", "transport-io"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "signal", "time"] }
@@ -29,7 +33,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "ansi"] }
 
 [dev-dependencies]
+rusqlite = { version = "0.41", features = ["bundled"] }
 tempfile.workspace = true
+git2 = { version = "0.21.0", default-features = false }
 rmcp = { version = "3.8", default-features = false, features = ["client", "transport-child-process"] }
 tokio = { version = "1", features = ["process"] }
 

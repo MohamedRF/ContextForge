@@ -82,3 +82,76 @@ fn unicode_init_status_doctor_and_map() {
     );
     assert!(!root.join(".gitignore").exists());
 }
+
+#[test]
+fn analyze_current_source_json_human_and_invalid_paths() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("源.rs"), "pub fn café() {}\n").unwrap();
+    for json in [false, true] {
+        let mut args = vec!["--root", "."];
+        if json {
+            args.push("--json");
+        }
+        args.extend(["analyze", "源.rs"]);
+        let output = run(temp.path(), &args);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        if json {
+            let outline: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(outline["symbols"][0]["name"], "café");
+            assert_eq!(outline["symbols"][0]["span"]["start_line"], 1);
+        } else {
+            assert!(String::from_utf8_lossy(&output.stdout).contains("café"));
+        }
+    }
+    for path in ["../outside.rs", "missing.rs"] {
+        let output = run(temp.path(), &["--root", ".", "--json", "analyze", path]);
+        assert!(!output.status.success());
+        assert!(output.stdout.is_empty());
+        assert!(!String::from_utf8_lossy(&output.stderr).contains(temp.path().to_str().unwrap()));
+    }
+    assert!(!temp.path().join(".contextforge").exists());
+}
+
+#[test]
+fn indexed_search_requires_explicit_index_and_returns_cited_json() {
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("a.rs"),
+        "fn water() { let text = \"\u{1b}[31m\"; }\n",
+    )
+    .unwrap();
+    let missing = run(temp.path(), &["--root", ".", "search", "water"]);
+    assert!(!missing.status.success());
+    assert!(missing.stdout.is_empty());
+    assert!(!temp.path().join(".contextforge").exists());
+    for command in ["init", "index"] {
+        let output = run(temp.path(), &["--root", ".", command]);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let output = run(
+        temp.path(),
+        &["--root", ".", "--json", "search", "water", "--limit", "1"],
+    );
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(result["results"][0]["path"], "a.rs");
+    assert_eq!(result["results"][0]["symbol"], "water");
+    assert_eq!(result["results"][0]["span"]["start_line"], 1);
+    let output = run(temp.path(), &["--root", ".", "search", "water"]);
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("a.rs:1-1"));
+    assert!(!output.stdout.contains(&0x1b));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("freshness not checked"));
+}

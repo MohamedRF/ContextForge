@@ -1,0 +1,25 @@
+[package]
+name = "contextforge-git"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+contextforge-core = { path = "../contextforge-core" }
+contextforge-parser = { path = "../contextforge-parser" }
+contextforge-graph = { path = "../contextforge-graph" }
+git2 = { version = "0.21.0", default-features = false }
+serde.workspace = true
+sha2 = "0.10"
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

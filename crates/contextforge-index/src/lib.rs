@@ -7,12 +7,29 @@ use std::{
     collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use thiserror::Error;
 
+mod derived;
+pub mod memory;
+pub mod search;
+#[cfg(test)]
+mod security_tests;
+pub mod snapshot;
+
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error("source parsing failed; index was not changed")]
+    Parse(#[from] contextforge_parser::Error),
+    #[error("unable to serialize syntax evidence")]
+    Serialization(#[from] serde_json::Error),
+    #[error("index changed concurrently; retry indexing")]
+    Concurrent,
+    #[error("search requires a current index; run contextforge index first")]
+    MissingIndex,
+    #[error("query must contain 1–256 non-control bytes, limit 1–100, offset 0–10000")]
+    InvalidQuery,
     #[error("repository discovery or source validation failed")]
     Repository(#[from] contextforge_core::Error),
     #[error("index filesystem operation failed")]
@@ -29,6 +46,8 @@ pub enum Error {
     Schema,
     #[error("index belongs to a different repository")]
     Identity,
+    #[error("index database or query exceeds resource limits")]
+    ResourceLimit,
 }
 
 #[derive(Debug, Serialize)]
@@ -39,6 +58,10 @@ pub struct IndexReport {
     pub unchanged: usize,
     pub deleted: usize,
     pub total_files: usize,
+    /// Actual parser invocations, including speculative work before concurrent writers finish.
+    pub parsed_files: usize,
+    /// Files whose stored syntax contains errors or reaches an extraction limit.
+    pub partial_files: u32,
 }
 
 #[derive(Debug, Serialize)]
@@ -107,13 +130,36 @@ fn connection(repository: &Repository, write: bool) -> Result<Option<Connection>
     }
     let path = directory.join("index.sqlite");
     let exists = reject_link(&path, false)?;
+    if exists && fs::metadata(&path)?.len() > 512 * 1024 * 1024 {
+        return Err(Error::ResourceLimit);
+    }
+    #[cfg(unix)]
+    if exists {
+        use std::os::unix::fs::MetadataExt;
+        if fs::metadata(&path)?.nlink() != 1 {
+            return Err(contextforge_core::Error::UnsafeMetadata.into());
+        }
+    }
     // SQLite rollback/journal sidecars must not redirect writes outside managed metadata.
     for name in [
         "index.sqlite-journal",
         "index.sqlite-wal",
         "index.sqlite-shm",
     ] {
-        reject_link(&directory.join(name), false)?;
+        let sidecar = directory.join(name);
+        if reject_link(&sidecar, false)? {
+            let metadata = fs::metadata(&sidecar)?;
+            if metadata.len() > 512 * 1024 * 1024 {
+                return Err(Error::ResourceLimit);
+            }
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::MetadataExt;
+                if metadata.nlink() != 1 {
+                    return Err(contextforge_core::Error::UnsafeMetadata.into());
+                }
+            }
+        }
     }
     if !exists && !write {
         return Ok(None);
@@ -123,15 +169,40 @@ fn connection(repository: &Repository, write: bool) -> Result<Option<Connection>
     } else {
         OpenFlags::SQLITE_OPEN_READ_ONLY
     };
-    let connection = Connection::open_with_flags(path, flags | OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
+    let mut connection =
+        Connection::open_with_flags(path, flags | OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
     connection.busy_timeout(Duration::from_secs(2))?;
+    // Bound SQL VM work in read-only requests. The budget belongs to the whole
+    // connection, so issuing many individually cheap queries cannot reset it.
+    if !write {
+        let started = Instant::now();
+        let mut callbacks = 0usize;
+        connection.progress_handler(
+            10_000,
+            Some(move || {
+                callbacks += 1;
+                callbacks >= 10_000 || started.elapsed() >= Duration::from_secs(5)
+            }),
+        )?;
+    }
+    use rusqlite::limits::Limit;
+    connection.set_limit(Limit::SQLITE_LIMIT_LENGTH, 32 * 1024 * 1024)?;
+    connection.set_limit(Limit::SQLITE_LIMIT_SQL_LENGTH, 64 * 1024)?;
+    connection.set_limit(Limit::SQLITE_LIMIT_ATTACHED, 0)?;
     connection.pragma_update(None, "trusted_schema", false)?;
+    if write {
+        let page_size: i64 = connection.pragma_query_value(None, "page_size", |row| row.get(0))?;
+        if page_size <= 0 {
+            return Err(Error::Schema);
+        }
+        connection.pragma_update(None, "max_page_count", 512 * 1024 * 1024 / page_size)?;
+    }
     Ok(Some(connection))
 }
 
 fn verify_schema(connection: &Connection, expected_identity: &str) -> Result<(), Error> {
     let version: u32 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
-    if version != 1 {
+    if !matches!(version, 1 | 2) {
         return Err(Error::Schema);
     }
     let stored: String = connection.query_row(
@@ -159,7 +230,9 @@ pub fn status(repository: &Repository) -> Result<IndexStatus, Error> {
     let files = connection.query_row("SELECT count(path) FROM files", [], |row| row.get(0))?;
     Ok(IndexStatus {
         state: "ready",
-        schema_version: Some(1),
+        schema_version: Some(
+            connection.pragma_query_value(None, "user_version", |row| row.get(0))?,
+        ),
         files,
         freshness: "not_checked",
     })
@@ -168,6 +241,10 @@ pub fn status(repository: &Repository) -> Result<IndexStatus, Error> {
 /// Capture eligible source bytes, then atomically upsert changed files and remove obsolete ones.
 /// All files are read/hashed to detect same-size and same-timestamp edits; only changes are written.
 pub fn index(repository: &Repository) -> Result<IndexReport, Error> {
+    index_with_rebuild(repository, false)
+}
+
+fn index_with_rebuild(repository: &Repository, rebuild: bool) -> Result<IndexReport, Error> {
     if !repository.initialized {
         return Err(Error::NotInitialized);
     }
@@ -191,6 +268,30 @@ pub fn index(repository: &Repository) -> Result<IndexReport, Error> {
         ));
     }
     let repository_identity = identity(repository);
+    // Prepare syntax before taking the write lock. Unchanged schema-2 files are not reparsed.
+    // A write-capable connection is necessary for SQLite hot-journal recovery after
+    // an interrupted writer. This remains an explicitly requested index operation.
+    let (anticipated, old_version) = if let Some(connection) = connection(repository, true)? {
+        let version =
+            connection.pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))?;
+        if version == 0 {
+            (BTreeMap::new(), 0)
+        } else {
+            verify_schema(&connection, &repository_identity)?;
+            (fingerprints(&connection)?, version)
+        }
+    } else {
+        (BTreeMap::new(), 0)
+    };
+    let mut prepared = BTreeMap::new();
+    for (path, _, fingerprint, content) in &documents {
+        if rebuild || old_version != 2 || anticipated.get(path) != Some(fingerprint) {
+            prepared.insert(
+                path.clone(),
+                contextforge_parser::parse_source(&repository_identity, path, content, 1000)?,
+            );
+        }
+    }
     let mut connection = connection(repository, true)?.ok_or(Error::NotInitialized)?;
     let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
     let version: u32 = transaction.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -206,21 +307,22 @@ pub fn index(repository: &Repository) -> Result<IndexReport, Error> {
         )?;
     }
     verify_schema(&transaction, &repository_identity)?;
-    let mut previous = {
-        let mut statement =
-            transaction.prepare("SELECT path, fingerprint FROM files ORDER BY path")?;
-        let records = statement.query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })?;
-        records.collect::<Result<BTreeMap<_, _>, _>>()?
-    };
+    let needs_migration: bool = transaction.pragma_query_value(None, "user_version", |row| {
+        row.get::<_, u32>(0).map(|v| v == 1)
+    })?;
+    if needs_migration {
+        derived::migrate(&transaction)?;
+    }
+    let mut previous = fingerprints(&transaction)?;
     let mut report = IndexReport {
-        schema_version: 1,
+        schema_version: 2,
         added: 0,
         modified: 0,
         unchanged: 0,
         deleted: 0,
         total_files: documents.len(),
+        parsed_files: prepared.len(),
+        partial_files: 0,
     };
     {
         let mut upsert = transaction.prepare("INSERT INTO files (path, language, fingerprint, content, bytes) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(path) DO UPDATE SET language = excluded.language, fingerprint = excluded.fingerprint, content = excluded.content, bytes = excluded.bytes")?;
@@ -228,6 +330,10 @@ pub fn index(repository: &Repository) -> Result<IndexReport, Error> {
             match previous.remove(&path) {
                 Some(old) if old == fingerprint => {
                     report.unchanged += 1;
+                    if needs_migration || rebuild {
+                        let outline = prepared.remove(&path).ok_or(Error::Concurrent)?;
+                        derived::replace(&transaction, &path, &content, &outline)?;
+                    }
                     continue;
                 }
                 Some(_) => report.modified += 1,
@@ -241,13 +347,27 @@ pub fn index(repository: &Repository) -> Result<IndexReport, Error> {
                 content,
                 content.len() as i64
             ])?;
+            let outline = prepared.remove(&path).ok_or(Error::Concurrent)?;
+            derived::replace(&transaction, &path, &content, &outline)?;
         }
         let mut delete = transaction.prepare("DELETE FROM files WHERE path = ?1")?;
         for path in previous.keys() {
+            derived::delete(&transaction, path)?;
             delete.execute([path])?;
             report.deleted += 1;
         }
     }
+    report.partial_files = transaction.query_row(
+        "SELECT count(path) FROM outlines WHERE partial = 1",
+        [],
+        |row| row.get(0),
+    )?;
     transaction.commit()?;
     Ok(report)
+}
+
+fn fingerprints(connection: &Connection) -> Result<BTreeMap<String, String>, Error> {
+    let mut statement = connection.prepare("SELECT path, fingerprint FROM files ORDER BY path")?;
+    let records = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    Ok(records.collect::<Result<BTreeMap<_, _>, _>>()?)
 }

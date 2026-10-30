@@ -11,9 +11,11 @@ description = "Transactional incremental SQLite source snapshots for ContextForg
 
 [dependencies]
 contextforge-core = { path = "../contextforge-core" }
-rusqlite = { version = "0.41", features = ["bundled"] }
+contextforge-parser = { path = "../contextforge-parser" }
+rusqlite = { version = "0.41", features = ["bundled", "hooks", "limits"] }
 sha2 = "0.10"
 serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
