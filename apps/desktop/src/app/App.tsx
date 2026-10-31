@@ -19,6 +19,7 @@ import {
   Menu,
   Plug,
   Plus,
+  RefreshCw,
   Search as SearchIcon,
   Settings2,
   ShieldCheck,
@@ -71,6 +72,10 @@ export function App() {
   const [systemDark, setSystemDark] = useState(
     () => window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
+  const application = useQuery({
+    queryKey: ["application"],
+    queryFn: api.applicationStatus,
+  });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const theme = useQuery({ queryKey: ["theme"], queryFn: api.theme });
   const savedSelection = useQuery({
@@ -283,7 +288,15 @@ export function App() {
           </div>
           <div className="row">
             <span className="status-dot" />{" "}
-            <span className="small muted">Local engine</span>
+            <span className="small muted">Local mode</span>
+            <button
+              className="icon-button"
+              aria-label="Refresh local data"
+              title="Refresh CLI and desktop shared state"
+              onClick={() => void client.invalidateQueries()}
+            >
+              <RefreshCw size={16} />
+            </button>
             <span className="topbar-divider" />
             <button
               className="icon-button"
@@ -363,12 +376,14 @@ export function App() {
               status={status}
               ready={ready}
               totalFiles={totalFiles}
+              version={application.data?.version}
               setView={setView}
             />
           )}
           {(view === "Dashboard" || view === "Projects") && (
             <ProjectCards
               view={view}
+              languages={application.data?.supported_languages ?? []}
               projects={projects}
               statuses={statuses}
               index={index}

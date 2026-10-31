@@ -70,7 +70,7 @@ export interface Node {
   path: string;
   qualified_name: string;
   kind: string;
-  span: Span;
+  span: Span | null;
 }
 export interface Visit {
   node: Node;

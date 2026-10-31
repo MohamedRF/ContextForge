@@ -18,6 +18,15 @@ pub type ServiceError = Box<dyn std::error::Error + Send + Sync>;
 pub struct ContextForgeService;
 
 impl ContextForgeService {
+    /// Engine capabilities independent of a selected repository or initialized index.
+    pub fn diagnostics() -> serde_json::Value {
+        serde_json::json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "supported_languages": ["rust", "python", "typescript", "javascript"],
+            "offline": true
+        })
+    }
+
     pub fn load_graph(repository: &Repository) -> Result<Graph, ServiceError> {
         let files = index::snapshot::syntax(repository)?;
         for file in &files {

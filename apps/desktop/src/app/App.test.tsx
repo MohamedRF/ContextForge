@@ -18,6 +18,11 @@ vi.mock("../lib/api", async (importOriginal) => {
   return {
     ...actual,
     api: {
+      applicationStatus: vi.fn().mockResolvedValue({
+        version: "0.1.0",
+        supported_languages: ["rust", "python", "typescript", "javascript"],
+        offline: true,
+      }),
       projects: vi.fn(),
       theme: vi.fn(),
       status: vi.fn(),
@@ -54,6 +59,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("Desktop navigation and native operations", () => {
+  it("refreshes shared state after changes from another interface", async () => {
+    mount();
+    await screen.findByText("Start with a repository");
+    expect(screen.getByText("0.1.0")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh local data" }));
+    await waitFor(() => expect(api.projects).toHaveBeenCalledTimes(2));
+  });
   it("shows real empty state and prevents search without a selected repository", async () => {
     mount();
     expect(

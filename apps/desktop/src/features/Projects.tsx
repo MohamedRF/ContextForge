@@ -27,6 +27,7 @@ export function DashboardOverview({
   status,
   ready,
   totalFiles,
+  version,
   setView,
 }: {
   id: number | null;
@@ -34,6 +35,7 @@ export function DashboardOverview({
   status: StatusQuery;
   ready: number;
   totalFiles: number;
+  version?: string;
   setView: Navigate;
 }) {
   return (
@@ -108,8 +110,8 @@ export function DashboardOverview({
         <div className="card metric">
           <Box size={19} />
           <span>Application version</span>
-          <strong>{status.data?.version ?? "—"}</strong>
-          <small>CLI � Desktop � MCP</small>
+          <strong>{version ?? "—"}</strong>
+          <small>CLI / Desktop / MCP</small>
         </div>
       </div>
       <div className="row spread section-heading">
@@ -127,6 +129,7 @@ export function DashboardOverview({
 
 export function ProjectCards({
   view,
+  languages,
   projects,
   statuses,
   index,
@@ -135,6 +138,7 @@ export function ProjectCards({
   setView,
 }: {
   view: "Dashboard" | "Projects";
+  languages: string[];
   projects: ProjectsQuery;
   statuses: StatusQuery[];
   index: Mutation;
@@ -238,10 +242,11 @@ export function ProjectCards({
               where each result came from before you act.
             </p>
             <div className="row">
-              <span className="badge">Rust</span>
-              <span className="badge">Python</span>
-              <span className="badge">TypeScript</span>
-              <span className="badge">JavaScript</span>
+              {languages.map((language) => (
+                <span className="badge" key={language}>
+                  {language}
+                </span>
+              ))}
             </div>
           </div>
         </div>

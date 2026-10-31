@@ -13,6 +13,12 @@ import type {
 } from "./types";
 
 export const api = {
+  applicationStatus: () =>
+    invoke<{
+      version: string;
+      supported_languages: string[];
+      offline: boolean;
+    }>("application_status"),
   projects: () => invoke<Project[]>("list_projects"),
   add: () => invoke<number | null>("add_project"),
   remove: (id: number) => invoke<void>("remove_project", { id }),

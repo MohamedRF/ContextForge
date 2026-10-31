@@ -104,3 +104,53 @@ fn simultaneous_registrations_are_unique_across_connections() {
     });
     assert_eq!(Registry::open(&state).unwrap().list().unwrap().len(), 1);
 }
+
+#[test]
+fn index_lock_coordinates_separate_processes() {
+    const CHILD_ROOT: &str = "CONTEXTFORGE_INDEX_LOCK_TEST_ROOT";
+    if let Some(root) = std::env::var_os(CHILD_ROOT) {
+        let root = std::path::PathBuf::from(root);
+        let repository = Repository::open(Some(&root), &root).unwrap();
+        let mut held = false;
+        index::index_controlled(&repository, false, &mut |phase, _, _| {
+            if phase == "reading" && !held {
+                held = true;
+                fs::write(root.join("ready"), "ready").unwrap();
+                let start = std::time::Instant::now();
+                while !root.join("release").exists() {
+                    if start.elapsed() > std::time::Duration::from_secs(10) {
+                        return false;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+            }
+            true
+        })
+        .unwrap();
+        return;
+    }
+    let temp = tempfile::tempdir().unwrap();
+    fs::write(temp.path().join("a.rs"), "fn shared() {}\n").unwrap();
+    let repository = Repository::open(Some(temp.path()), temp.path()).unwrap();
+    repository.init().unwrap();
+    let repository = Repository::open(Some(temp.path()), temp.path()).unwrap();
+    index::index(&repository).unwrap();
+    let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "index_lock_coordinates_separate_processes"])
+        .env(CHILD_ROOT, temp.path())
+        .spawn()
+        .unwrap();
+    let start = std::time::Instant::now();
+    while !temp.path().join("ready").exists() {
+        assert!(
+            start.elapsed() < std::time::Duration::from_secs(10),
+            "child did not acquire lock"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    let result = index::index_controlled(&repository, false, &mut |phase, _, _| phase != "waiting");
+    fs::write(temp.path().join("release"), "release").unwrap();
+    assert!(child.wait().unwrap().success());
+    assert!(matches!(result, Err(index::Error::Cancelled)));
+    assert_eq!(index::status(&repository).unwrap().files, 1);
+}

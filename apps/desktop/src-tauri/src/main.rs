@@ -57,6 +57,11 @@ async fn work<T: Send + 'static>(
 }
 
 #[tauri::command]
+fn application_status() -> Value {
+    ContextForgeService::diagnostics()
+}
+
+#[tauri::command]
 async fn list_projects(state: tauri::State<'_, State>) -> Result<Value, String> {
     work(&state, |registry| {
         Ok(serde_json::to_value(registry.list()?)?)
@@ -484,6 +489,7 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            application_status,
             list_projects,
             add_project,
             remove_project,
