@@ -1,5 +1,6 @@
 [workspace]
-members = ["crates/contextforge-core", "crates/contextforge-index", "crates/contextforge-parser", "crates/contextforge-graph", "crates/contextforge-git", "crates/contextforge-context", "crates/contextforge-cli"]
+members = ["crates/contextforge-core", "crates/contextforge-index", "crates/contextforge-parser", "crates/contextforge-graph", "crates/contextforge-git", "crates/contextforge-context", "crates/contextforge-cli", "crates/contextforge-service", "apps/desktop/src-tauri"]
+default-members = ["crates/*"]
 resolver = "3"
 
 [workspace.package]

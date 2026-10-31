@@ -32,3 +32,23 @@ Path checks do not eliminate TOCTOU races against an actively hostile process sw
 Tests cover traversal/absolute paths, Windows junctions, Unix symlinks, malformed frames/arguments, literal SQL/FTS queries, injection-looking comments as data, Unicode/escaping budgets, oversized databases, SQLite work/row/statement limits, transactional failure/restart, source/cache integrity, cancellation and timeouts. Unix-only tests require Unix runners. `cargo audit` and `cargo deny check` must be recorded separately; unavailable tools are never treated as a clean audit. This document defines current protections and gaps, not a completed security audit or release approval.
 
 On 2026-10-30, locally installed cargo-audit 0.22.2 checked 175 locked dependencies against 1395 RustSec advisories (database commit `2295466c4e9df26647fd67d8fa1c705ac2fc7f81`): zero known vulnerabilities and no warnings. No advisory suppressions were used. This is a point-in-time dependency advisory check, not proof that the application or bundled native code has no vulnerabilities. `cargo deny check` and new-source Unix/other-platform validation were not run; see the [development guide](development.md) for validation commands and platform scope.
+
+
+## Desktop preview boundary
+
+The bundled webview can invoke application commands but has no filesystem,
+shell, opener or remote-content capability. Native folder selection authorizes
+registrations; later commands resolve stored IDs and validate paths in Rust.
+Expensive operations have a four-worker process limit and repository index
+writers share an OS file lock across processes. Index cancellation drops its
+transaction. These controls do not solve the hostile replacement/path-race
+limitations documented above.
+
+MCP configuration changes are retained as native plans. Full client settings
+never enter the webview. Apply requires native confirmation, a current-content
+check, a private temporary-file backup and atomic replacement. Unrelated values
+are retained; formatting/comments may change. Noncooperating external writers
+can still race configuration updates and should be closed while configuring.
+Selected executables are never run by the configuration manager; validation
+reports syntax/entry presence, never verified connectivity. Source text is rendered
+as escaped React text. No cloud providers, remote HTTP listener or updater exist.

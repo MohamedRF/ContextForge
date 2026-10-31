@@ -1,0 +1,72 @@
+name: Desktop release artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Desktop / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis
+          - os: macos-15
+            bundles: app,dmg
+          - os: macos-15-intel
+            bundles: app,dmg
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Install Rust
+        run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - name: Frontend quality gates
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test
+          npm run build
+          npm audit --audit-level=moderate
+      - name: Rust quality gates
+        shell: bash
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo test --workspace --locked
+          cargo build --workspace --release --locked
+      - name: Package standalone CLI and MCP
+        shell: bash
+        run: |
+          target=$(rustc -vV | sed -n 's/^host: //p')
+          binary=target/release/contextforge
+          if [[ "$RUNNER_OS" == "Windows" ]]; then binary="$binary.exe"; fi
+          python scripts/package.py --binary "$binary" --target "$target" --output target/packages
+      - name: Bundle unsigned desktop preview
+        working-directory: apps/desktop
+        env:
+          BUNDLES: ${{ matrix.bundles }}
+        shell: bash
+        run: npm run tauri -- build --bundles "$BUNDLES"
+      - name: Collect bundles and checksums
+        run: python scripts/package-desktop.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: contextforge-${{ runner.os }}-${{ runner.arch }}
+          path: target/packages/*
+          if-no-files-found: error
+          retention-days: 30

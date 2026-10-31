@@ -29,3 +29,12 @@ contextforge --help
 ```
 
 For an isolated installation, add `--root /path/to/install-directory` and invoke its `bin/contextforge` executable. This does not publish a crate or create a GitHub release.
+
+## Benchmark and package tooling
+
+Development scripts use Python 3.11+ and its standard library; Python is not a
+ContextForge runtime dependency. See [benchmark reproduction](benchmarking.md)
+and [native package preparation](release.md). Package smoke checks run only on
+the build host; actual clean-machine and other-platform evidence must be recorded
+separately. The manually dispatched package workflow prepares development
+artifacts without publishing releases.

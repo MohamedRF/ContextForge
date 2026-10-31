@@ -1,4 +1,5 @@
 use contextforge_core::Repository;
+use contextforge_service::{index as contextforge_index, parser as contextforge_parser};
 use rmcp::{
     ErrorData, Json, ServerHandler, ServiceExt, handler::server::wrapper::Parameters, schemars,
     tool, tool_handler, tool_router, transport::async_rw::AsyncRwTransport,

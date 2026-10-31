@@ -42,4 +42,23 @@ All seven MCP tools now exist. SDK request-context cancellation races the bounde
 
 ## Open decisions
 
-The owner selected the MIT license for public distribution; see the root LICENSE. Cross-platform support is a design goal; assess actual CI results before adding support claims. Harness configs, future persistent migrations, automatic snapshot refresh, peer/process quotas, path races, Windows cache permissions and broad benchmark design remain tracked work.
+Harness configuration generation stays in the CLI adapter as a read-only preview.
+It emits absolute executable/root launch arguments in each documented client
+format, without reading or editing harness settings. JSON serializers encode path
+strings; Codex TOML uses the compatible basic-string escape subset, verified by
+the TOML parser and installed Codex CLI. Control characters and client variable
+interpolation in paths fail closed. See [integrations](integrations.md).
+Benchmarking and packaging are development-only Python standard-library tools,
+separate from runtime intelligence and requiring no production dependencies.
+
+The owner selected the MIT license for public distribution; see the root LICENSE. Cross-platform support is a design goal; assess actual CI results before adding support claims. Automatic harness config updates, actual harness sessions, future persistent migrations, automatic snapshot refresh, peer/process quotas, path races, Windows cache permissions and broad benchmark design remain tracked work.
+
+
+## Desktop adapter and shared services
+
+`contextforge-service` owns shared orchestration, project registrations and MCP
+configuration plans, and re-exports the existing engines. CLI and MCP retain
+protocol/argument handling; Desktop uses typed Tauri commands. No engine depends
+on Tauri. Native blocking workers and SQLite transactions keep UI work separate
+from repository operations. Index writers also use bounded-wait OS file locks,
+including cancellation before commit. See [desktop architecture](desktop-architecture.md).

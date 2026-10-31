@@ -18,6 +18,7 @@ name = "contextforge"
 path = "src/main.rs"
 
 [dependencies]
+contextforge-service = { path = "../contextforge-service" }
 contextforge-core = { path = "../contextforge-core" }
 contextforge-index = { path = "../contextforge-index" }
 contextforge-parser = { path = "../contextforge-parser" }
@@ -33,6 +34,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "ansi"] }
 
 [dev-dependencies]
+toml.workspace = true
 rusqlite = { version = "0.41", features = ["bundled"] }
 tempfile.workspace = true
 git2 = { version = "0.21.0", default-features = false }

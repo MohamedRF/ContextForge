@@ -1,10 +1,11 @@
 <div align="center">
 
+
 # ContextForge
 
 **Local repository context. Built for coding assistants.**
 
-A Rust CLI and MCP server for bounded source discovery and incremental local indexing.
+One local Rust engine with CLI, Desktop and MCP interfaces for repository intelligence.
 
 [![CI](https://github.com/MohamedRF/ContextForge/actions/workflows/ci.yml/badge.svg)](https://github.com/MohamedRF/ContextForge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -15,9 +16,31 @@ A Rust CLI and MCP server for bounded source discovery and incremental local ind
 
 </div>
 
+## Desktop preview
+
+ContextForge now includes a Tauri 2 desktop interface alongside its independent
+CLI and MCP stdio server. All interfaces reuse the Rust indexing, search, graph,
+Git impact and context engines and the existing repository cache format.
+
+The desktop provides native repository selection, indexing/cancellation, cited
+search, source outlines, dependency visualization, Git impact, context packaging,
+and reviewed MCP configuration changes. See the [desktop guide](docs/desktop-user-guide.md)
+and [architecture](docs/desktop-architecture.md). Unsigned previews are not signed
+production releases; installation and platform validation are recorded per release.
+
+Developer workflow (Node 24 and Tauri platform prerequisites required):
+
+```text
+cd apps/desktop
+npm ci
+npm run build
+npm run tauri -- dev
+```
+
+
 ---
 
-ContextForge gives coding tools a repeatable view of a local source tree. It discovers eligible files, stores source snapshots in SQLite, and updates changed records without executing project code. A stdio MCP server exposes a bounded source-file inventory to compatible clients.
+ContextForge gives coding tools a repeatable view of a local source tree. It discovers eligible files, stores source snapshots in SQLite, and updates changed records without executing project code. A stdio MCP server exposes seven source-backed retrieval tools to compatible clients.
 
 **Current stage:** discovery, storage, Tree-sitter outlines, indexed search, bounded syntax graphs, read-only Git impact, token-budgeted context and persistent knowledge controls work through the Rust CLI; all seven retrieval tools are available over MCP. Call/import targets remain heuristic or unknown. Harness installation verification and further security hardening remain open. This checkout is an unreleased development version; it is not the complete v0.1 MVP.
 
@@ -40,7 +63,8 @@ ContextForge gives coding tools a repeatable view of a local source tree. It dis
 | Git changed ranges and likely impact | Implemented; old/new source evidence, no safety verdict |
 | Token-budgeted context packing | Implemented; explicit serialized JSON estimator |
 | Structural knowledge status/clear/rebuild | Implemented; hash validation and transactional lifecycle |
-| Harness setup helpers and prebuilt releases | Planned |
+| Harness configuration previews | Implemented for Claude Code, Codex, Cursor and VS Code; manual merge only |
+| Prebuilt releases | Unpublished; local packaging and manual artifact workflow prepared |
 
 ## Quick start
 
@@ -104,6 +128,7 @@ Eligible files are read and hashed on each run. Only changed database rows are w
 | `contextforge context <query> --budget 4000 [--git]` | Pack deduplicated cited source as budgeted compact JSON |
 | `contextforge memory <status\|clear\|rebuild>` | Validate or explicitly reset/rebuild local structural knowledge |
 | `contextforge mcp` | Start the stdio MCP server |
+| `contextforge setup <claude\|codex\|cursor\|vscode> [--dry-run]` | Preview client-specific configuration without changing settings |
 
 Global options: `--root <directory>`, `--json`, and `--verbose`. Diagnostics go to stderr. In MCP mode, stdout is reserved for protocol messages.
 
@@ -145,7 +170,30 @@ including compact package JSON overhead. This is not exact model tokenization;
 the MCP envelope is outside that budget. See [context packing](docs/context.md)
 and [persistent knowledge commands](docs/memory.md).
 
-Initialize → list → call and clean EOF shutdown are tested with the official `rmcp` client and raw protocol tests. Claude Code, Codex, Cursor, and VS Code installation paths have not yet been verified. See the [MCP contract](docs/mcp-tools.md).
+Initialize → list → call and clean EOF shutdown are tested with the official `rmcp` client and raw protocol tests. See the [MCP contract](docs/mcp-tools.md).
+
+### Configure a coding harness
+
+```sh
+contextforge --root /path/to/project setup claude --dry-run
+contextforge --root /path/to/project setup codex --dry-run
+contextforge --root /path/to/project setup cursor --dry-run
+contextforge --root /path/to/project setup vscode --dry-run
+```
+
+Setup prints a fragment and destination; it never modifies settings. Back up the
+destination and merge only the generated entry, preserving existing servers.
+The previews use Claude's project `.mcp.json`, Codex's `config.toml`, Cursor's
+project `.cursor/mcp.json`, and VS Code's workspace `.vscode/mcp.json`, with each
+client's documented schema. Generate them using your installed binary's stable
+location. Reload the client, review trust prompts and call `project_map`, then
+`search_context` with an indexed symbol.
+
+All four formats are parser-tested, and their descriptors launch the real server
+through the official MCP client. Installed Codex CLI also parses its generated
+configuration in an isolated home. Actual agent-session calls remain unverified
+for all four. See [configuration instructions, official sources and verification
+steps](docs/integrations.md).
 
 ## Configuration and supported files
 
@@ -206,7 +254,11 @@ Report vulnerabilities through the process in [SECURITY.md](SECURITY.md). For im
 
 ## Roadmap and contributing
 
-Next work includes remaining security hardening and MVP harness verification, followed by setup helpers, measured benchmarks and release packaging. `memory status` validates observed source hashes; search/graph/context retain their explicit captured-snapshot contracts.
+Next work includes remaining security hardening, actual harness-session verification,
+opt-in configuration updates and clean-machine/cross-platform package validation.
+`memory status` validates observed source hashes; search/graph/context retain their
+explicit captured-snapshot contracts. See [known limits](docs/known-limits.md) and
+[local packaging and release checklist](docs/release.md).
 
 See the [roadmap](docs/roadmap.md), [changelog](CHANGELOG.md), and [contribution guide](CONTRIBUTING.md). Small, tested changes and reproducible bug reports are welcome.
 

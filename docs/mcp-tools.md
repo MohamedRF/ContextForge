@@ -20,4 +20,12 @@ Empty inventories/search results are successful. Explicit invalid values are JSO
 
 All seven tools observe the SDK request cancellation token. Cancellation stops waiting with a safe internal error; the SDK suppresses responses for cancelled requests, and the native worker keeps its shared permit until actual completion. Ten-second worker waits apply except Git/context (30 seconds). SQL read work also has a cooperative five-second/100-million-VM-instruction cap per connection. Blocking OS/native operations are not forcibly terminated. Raw-protocol cancellation tests and unit permit/timeout tests cover these contracts. See [security limits](security.md).
 
-Harness-specific setup remains unverified; no external settings are modified.
+Client-specific setup previews and launch descriptors are tested; actual
+harness-session tool calls remain unverified. No external settings are modified.
+See [integration formats and evidence](integrations.md).
+
+
+Desktop shares these engines through `contextforge-service`; it never runs the
+CLI subprocess for retrieval. MCP is still the independent `contextforge mcp`
+entry point. The integration manager offers preview/confirm/backup/apply and
+syntax validation without claiming harness connectivity. See the [desktop guide](desktop-user-guide.md).

@@ -7,23 +7,7 @@ pub(crate) fn pack_context(
     budget: usize,
     include_git: bool,
 ) -> Result<contextforge_context::Package, Box<dyn std::error::Error + Send + Sync>> {
-    contextforge_context::validate(query, budget)?;
-    let mut paths = std::collections::BTreeSet::new();
-    if include_git {
-        let impact =
-            contextforge_git::analyze(repository, &contextforge_git::Mode::Unstaged, 0, 100)?;
-        // Direct changes are complete or analyze fails at its hard change cap.
-        // The report's truncation flag also covers depth-zero graph expansion,
-        // which is intentionally unused for path-only proximity ranking.
-        for change in impact.direct_changes {
-            if let Some(path) = change.new_path.or(change.old_path) {
-                paths.insert(path);
-            }
-        }
-    }
-    Ok(contextforge_context::pack(
-        repository, query, budget, &paths,
-    )?)
+    contextforge_service::ContextForgeService::pack_context(repository, query, budget, include_git)
 }
 
 pub(crate) fn impact_mode(
@@ -52,16 +36,8 @@ pub(crate) fn impact_mode(
 }
 
 pub(crate) fn load_graph(repository: &Repository) -> Result<Graph, Box<dyn std::error::Error>> {
-    let files = contextforge_index::snapshot::syntax(repository)?;
-    for file in &files {
-        let value: serde_json::Value = serde_json::from_str(&file.payload)?;
-        if value["path"] != file.path || value["fingerprint"] != file.fingerprint {
-            return Err(contextforge_graph::Error::InvalidSyntax.into());
-        }
-    }
-    Ok(Graph::from_json(
-        files.iter().map(|file| file.payload.as_str()),
-    )?)
+    contextforge_service::ContextForgeService::load_graph(repository)
+        .map_err(|error| error as Box<dyn std::error::Error>)
 }
 
 pub(crate) fn print_graph(result: &GraphResult, json: bool) -> Result<(), serde_json::Error> {

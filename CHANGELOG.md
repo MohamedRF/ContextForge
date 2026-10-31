@@ -6,6 +6,11 @@ Changes will be recorded here before each release. There are no published releas
 
 ### Added
 
+- Preview-only `setup` for Claude Code, Codex, Cursor and VS Code with documented formats, absolute launch paths, JSON output and real MCP descriptor tests.
+- Isolated installed-Codex configuration check; deterministic malformed Unicode parser and bounded cyclic graph invariant tests.
+- Repeatable release CLI benchmarks over four-language 100/1000-file fixtures, raw metrics and scoped retrieval quality measurements.
+- Native development ZIP/checksum packaging with extracted-binary smoke checks, manual artifact workflow, known-limits document and release checklist.
+
 - Rust workspace with a `contextforge` CLI and versioned project configuration.
 - Root-scoped source discovery for Rust, Python, TypeScript and JavaScript files.
 - Incremental SQLite source snapshots with SHA-256 fingerprints, repository isolation, transactional updates and interrupted-writer recovery.
@@ -24,5 +29,20 @@ Changes will be recorded here before each release. There are no published releas
 ### Limitations
 
 - Context token counts use an explicit estimate, not a model tokenizer; syntax dependencies do not prove semantic binding or change safety.
-- No published crates, prebuilt binaries or verified harness-specific setup helpers.
-- Ordinary status/search/graph/context use labeled captured snapshots; memory status validates observed source hashes. Hostile filesystem/cache, Windows permissions/hard links, process quotas and dependency audits remain open.
+- No published crates/binaries or actual harness-session verification; setup is preview-only and requires manual merge.
+- Ordinary status/search/graph/context use labeled captured snapshots; memory status validates observed source hashes. Hostile filesystem/cache, Windows permissions/hard links and process quotas remain open; local cargo-audit reports no known advisories at the recorded database revision.
+
+
+## Desktop preview (0.1.0)
+
+- Add a Tauri 2 / React / TypeScript desktop adapter using shared Rust services.
+- Persist project registrations and themes; add CLI `projects` registry commands.
+- Add native folder selection, bounded indexing progress, cooperative cancellation
+  and OS file locks coordinating writers across processes.
+- Expose cited search, bounded source outlines, dependencies, Git impact and
+  context packing without duplicating retrieval or ranking.
+- Add MCP configuration review, native confirmation, backup, atomic merge/removal
+  and syntax/entry validation. Actual harness connectivity remains unverified.
+- Add Windows/macOS artifact workflows, checksums, architecture and user guides.
+- This is an unsigned developer preview. Signing, notarization and full production
+  acceptance are not claimed; see release notes for actual validation evidence.

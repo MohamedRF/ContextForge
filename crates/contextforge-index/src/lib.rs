@@ -20,6 +20,10 @@ pub mod snapshot;
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error("indexing cancelled; committed snapshot was preserved")]
+    Cancelled,
+    #[error("another process is indexing this repository; retry after it finishes")]
+    IndexingBusy,
     #[error("source parsing failed; index was not changed")]
     Parse(#[from] contextforge_parser::Error),
     #[error("unable to serialize syntax evidence")]
@@ -245,8 +249,47 @@ pub fn index(repository: &Repository) -> Result<IndexReport, Error> {
 }
 
 fn index_with_rebuild(repository: &Repository, rebuild: bool) -> Result<IndexReport, Error> {
+    index_controlled(repository, rebuild, &mut |_, _, _| true)
+}
+
+/// Cooperative progress/cancellation; returning false rolls back any pending transaction.
+/// An OS file lock coordinates writers across CLI, MCP and desktop processes.
+pub fn index_controlled(
+    repository: &Repository,
+    rebuild: bool,
+    progress: &mut impl FnMut(&'static str, usize, usize) -> bool,
+) -> Result<IndexReport, Error> {
     if !repository.initialized {
         return Err(Error::NotInitialized);
+    }
+    let directory = cache_directory(repository);
+    validate_directory(&directory, true)?;
+    let lock_path = directory.join("index.lock");
+    reject_link(&lock_path, false)?;
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(lock_path)?;
+    let wait_started = Instant::now();
+    loop {
+        match lock.try_lock() {
+            Ok(()) => break,
+            Err(std::fs::TryLockError::WouldBlock) => {
+                if !progress("waiting", 0, 0) {
+                    return Err(Error::Cancelled);
+                }
+                if wait_started.elapsed() >= Duration::from_secs(5) {
+                    return Err(Error::IndexingBusy);
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            Err(std::fs::TryLockError::Error(error)) => return Err(Error::Filesystem(error)),
+        }
+    }
+    if !progress("discovering", 0, 0) {
+        return Err(Error::Cancelled);
     }
     let map = repository.project_map(1000)?;
     if map.truncated {
@@ -254,7 +297,11 @@ fn index_with_rebuild(repository: &Repository, rebuild: bool) -> Result<IndexRep
     }
     let mut documents = Vec::new();
     let mut total_bytes = 0;
-    for file in map.files {
+    let total = map.files.len();
+    for (position, file) in map.files.into_iter().enumerate() {
+        if !progress("reading", position, total) {
+            return Err(Error::Cancelled);
+        }
         let content = repository.read_source(Path::new(&file.path))?;
         total_bytes += content.len();
         if total_bytes > 64 * 1024 * 1024 {
@@ -284,7 +331,10 @@ fn index_with_rebuild(repository: &Repository, rebuild: bool) -> Result<IndexRep
         (BTreeMap::new(), 0)
     };
     let mut prepared = BTreeMap::new();
-    for (path, _, fingerprint, content) in &documents {
+    for (position, (path, _, fingerprint, content)) in documents.iter().enumerate() {
+        if !progress("parsing", position, total) {
+            return Err(Error::Cancelled);
+        }
         if rebuild || old_version != 2 || anticipated.get(path) != Some(fingerprint) {
             prepared.insert(
                 path.clone(),
@@ -326,7 +376,11 @@ fn index_with_rebuild(repository: &Repository, rebuild: bool) -> Result<IndexRep
     };
     {
         let mut upsert = transaction.prepare("INSERT INTO files (path, language, fingerprint, content, bytes) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(path) DO UPDATE SET language = excluded.language, fingerprint = excluded.fingerprint, content = excluded.content, bytes = excluded.bytes")?;
-        for (path, language, fingerprint, content) in documents {
+        for (position, (path, language, fingerprint, content)) in documents.into_iter().enumerate()
+        {
+            if !progress("writing", position, total) {
+                return Err(Error::Cancelled);
+            }
             match previous.remove(&path) {
                 Some(old) if old == fingerprint => {
                     report.unchanged += 1;
@@ -362,6 +416,9 @@ fn index_with_rebuild(repository: &Repository, rebuild: bool) -> Result<IndexRep
         [],
         |row| row.get(0),
     )?;
+    if !progress("committing", total, total) {
+        return Err(Error::Cancelled);
+    }
     transaction.commit()?;
     Ok(report)
 }

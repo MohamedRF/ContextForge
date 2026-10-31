@@ -2,6 +2,7 @@
 target/
 /.tools/
 **/*.rs.bk
+__pycache__/
 
 # ContextForge caches contain local source snapshots
 .contextforge/
@@ -26,8 +27,15 @@ Thumbs.db
 Desktop.ini
 
 # Local development notes and machine-specific bootstrap helper
-/AGENTS.md
-/TASKS.md
 /PROMPT.md
 /LICENSE-STRATEGY.md
 /scripts/cargo-local.ps1
+
+# Desktop dependencies and generated assets
+node_modules/
+apps/desktop/dist/
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/icons/*
+!apps/desktop/src-tauri/icons/icon.png
+!apps/desktop/src-tauri/icons/icon.ico
+!apps/desktop/src-tauri/icons/icon.icns

@@ -1,8 +1,10 @@
 mod intelligence;
 mod mcp;
+mod setup;
 
 use clap::{Parser, Subcommand};
 use contextforge_core::Repository;
+use contextforge_service::{index as contextforge_index, parser as contextforge_parser};
 use std::{path::PathBuf, process::ExitCode};
 use tracing_subscriber::prelude::*;
 
@@ -28,6 +30,19 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Manage the project registry shared with ContextForge Desktop.
+    Projects {
+        #[command(subcommand)]
+        action: ProjectCommand,
+    },
+    /// Preview manual MCP configuration; never modifies harness settings.
+    Setup {
+        #[arg(value_enum)]
+        harness: setup::Harness,
+        /// Explicit preview mode (also the default); no files are written.
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Inspect, clear or rebuild source-linked local structural knowledge.
     Memory {
         #[command(subcommand)]
@@ -119,6 +134,13 @@ enum MemoryCommand {
     Rebuild,
 }
 
+#[derive(Subcommand)]
+enum ProjectCommand {
+    List,
+    Add { path: PathBuf },
+    Remove { id: i64 },
+}
+
 #[tokio::main]
 async fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -145,10 +167,55 @@ async fn main() -> ExitCode {
 }
 
 async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+    if let Command::Projects { action } = cli.command {
+        let registry = contextforge_service::registry::Registry::user()
+            .map_err(|error| error as Box<dyn std::error::Error>)?;
+        let value = match action {
+            ProjectCommand::List => serde_json::to_value(
+                registry
+                    .list()
+                    .map_err(|error| error as Box<dyn std::error::Error>)?,
+            )?,
+            ProjectCommand::Add { path } => {
+                serde_json::json!({"id": registry.add(&path).map_err(|error| error as Box<dyn std::error::Error>)?})
+            }
+            ProjectCommand::Remove { id } => {
+                registry
+                    .remove(id)
+                    .map_err(|error| error as Box<dyn std::error::Error>)?;
+                serde_json::json!({"unregistered": id, "source_and_index_preserved": true})
+            }
+        };
+        println!("{}", serde_json::to_string(&value)?);
+        return Ok(());
+    }
     let current = std::env::current_dir().map_err(|_| "unable to determine current directory")?;
     let repository = Repository::open(cli.root.as_deref(), &current)?;
     tracing::debug!("repository configuration validated");
     match cli.command {
+        Command::Projects { .. } => {
+            unreachable!("project commands are handled before repository discovery")
+        }
+        Command::Setup {
+            harness,
+            dry_run: _,
+        } => {
+            let executable =
+                std::env::current_exe().map_err(|_| "unable to locate the running executable")?;
+            let preview = setup::preview(harness, repository.root(), &executable)?;
+            if cli.json {
+                println!("{}", serde_json::to_string(&preview)?);
+            } else {
+                println!(
+                    "Manual configuration for {}\nDestination: {}\n\n{}\n\n{}\n{}",
+                    preview.harness,
+                    preview.destination,
+                    preview.configuration,
+                    preview.instructions,
+                    preview.verification
+                );
+            }
+        }
         Command::Memory { action } => {
             let value = match action {
                 MemoryCommand::Status => {
