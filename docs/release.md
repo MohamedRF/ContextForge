@@ -44,6 +44,14 @@ linked workflow run for the exact source commit and results. Windows GNU packagi
 was also exercised locally. Linux/ARM Linux packages are not desktop release
 targets; Linux CI checks do not imply a published or installed Linux desktop build.
 
+## Published preview
+
+`v0.1.0-desktop-preview.1` was published from commit `cdc1ad8` on 31 October 2026
+with 16 checksum-verified assets for Windows x64, macOS ARM64 and macOS Intel.
+Both the CI and native artifact workflow runs passed for that commit. The gates
+below remain the checklist for a future stable or signed release; this unsigned
+preview does not satisfy the unchecked items.
+
 ## Release gates
 
 - [ ] Resolve remaining Phase 8/10 privacy, containment, cache and process-quota limits.

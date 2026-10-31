@@ -1,8 +1,10 @@
 # Changelog
 
-Changes will be recorded here before each release. There are no published releases yet.
+Changes are recorded here before each release. The first desktop developer preview
+was published on 31 October 2026 as
+[`v0.1.0-desktop-preview.1`](https://github.com/MohamedRF/ContextForge/releases/tag/v0.1.0-desktop-preview.1).
 
-## Unreleased
+## 0.1.0 — published as v0.1.0-desktop-preview.1
 
 ### Added
 
@@ -29,7 +31,7 @@ Changes will be recorded here before each release. There are no published releas
 ### Limitations
 
 - Context token counts use an explicit estimate, not a model tokenizer; syntax dependencies do not prove semantic binding or change safety.
-- No published crates/binaries or actual harness-session verification; setup is preview-only and requires manual merge.
+- No published crates or actual harness-session verification. Published binaries are an unsigned developer preview; setup is preview-only and requires manual merge.
 - Ordinary status/search/graph/context use labeled captured snapshots; memory status validates observed source hashes. Hostile filesystem/cache, Windows permissions/hard links and process quotas remain open; local cargo-audit reports no known advisories at the recorded database revision.
 
 

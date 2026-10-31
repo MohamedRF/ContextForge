@@ -42,7 +42,7 @@ npm run tauri -- dev
 
 ContextForge gives coding tools a repeatable view of a local source tree. It discovers eligible files, stores source snapshots in SQLite, and updates changed records without executing project code. A stdio MCP server exposes seven source-backed retrieval tools to compatible clients.
 
-**Current stage:** discovery, storage, Tree-sitter outlines, indexed search, bounded syntax graphs, read-only Git impact, token-budgeted context and persistent knowledge controls work through the Rust CLI; all seven retrieval tools are available over MCP. Call/import targets remain heuristic or unknown. Harness installation verification and further security hardening remain open. This checkout is an unreleased development version; it is not the complete v0.1 MVP.
+**Current stage:** discovery, storage, Tree-sitter outlines, indexed search, bounded syntax graphs, read-only Git impact, token-budgeted context and persistent knowledge controls work through the Rust CLI; all seven retrieval tools are available over MCP. Call/import targets remain heuristic or unknown. Harness installation verification and further security hardening remain open. This checkout is a development version after the published desktop developer preview; it is not the complete v0.1 MVP.
 
 ## What works today
 
@@ -64,11 +64,11 @@ ContextForge gives coding tools a repeatable view of a local source tree. It dis
 | Token-budgeted context packing | Implemented; explicit serialized JSON estimator |
 | Structural knowledge status/clear/rebuild | Implemented; hash validation and transactional lifecycle |
 | Harness configuration previews | Implemented for Claude Code, Codex, Cursor and VS Code; manual merge only |
-| Prebuilt releases | Unpublished; local packaging and manual artifact workflow prepared |
+| Prebuilt releases | Published as an unsigned desktop developer preview; source installs remain supported |
 
 ## Quick start
 
-Prerequisites: [Rust](https://www.rust-lang.org/tools/install), Cargo, Git, and the native linker/build tools for your platform. The repository pins **Rust 1.99.1** and builds bundled SQLite, so a C compiler is required. Format, Clippy, tests, and release builds have passed in CI on **Windows, Linux, and macOS**. See the [verified workflow run](https://github.com/MohamedRF/ContextForge/actions/runs/41014286004) and [latest CI results](https://github.com/MohamedRF/ContextForge/actions).
+Prerequisites: [Rust](https://www.rust-lang.org/tools/install), Cargo, Git, and the native linker/build tools for your platform. The repository pins **Rust 1.99.1** and builds bundled SQLite, so a C compiler is required. Format, Clippy, tests, and release builds have passed in CI on **Windows, Linux, and macOS**. See the [release CI run](https://github.com/MohamedRF/ContextForge/actions/runs/41174192276) and [latest CI results](https://github.com/MohamedRF/ContextForge/actions).
 
 ```sh
 git clone https://github.com/MohamedRF/ContextForge.git
@@ -78,7 +78,7 @@ cargo install --path crates/contextforge-cli --locked
 contextforge --version
 ```
 
-`cargo install --path` installs from this checkout. A crates.io package and prebuilt releases are not published yet. Ensure Cargo's binary directory is on your PATH.
+`cargo install --path` installs from this checkout. A crates.io package is not published. Prebuilt desktop preview binaries and CLI ZIPs are attached to the [v0.1.0 desktop preview release](https://github.com/MohamedRF/ContextForge/releases/tag/v0.1.0-desktop-preview.1). Ensure Cargo's binary directory is on your PATH.
 
 Point ContextForge at a repository or source directory:
 

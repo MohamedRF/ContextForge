@@ -39,6 +39,21 @@ Acceptance and validation evidence will be recorded below as work proceeds.
   clean-machine installs, signing, notarization and production acceptance remain
   outstanding; the task tracker deliberately does not mark those milestones done.
 
+### Desktop preview publication — verified 31 October 2026
+
+- Published [`v0.1.0-desktop-preview.1`](https://github.com/MohamedRF/ContextForge/releases/tag/v0.1.0-desktop-preview.1)
+  from `cdc1ad8` as an unsigned GitHub prerelease with 16 assets: Windows x64
+  NSIS installer and CLI ZIP, plus macOS ARM64/Intel app ZIP, DMG and CLI ZIP,
+  each with a SHA-256 sidecar.
+- Native artifact workflow 41174192293 (attempt 2, after an `hdiutil` "Resource
+  busy" macOS ARM failure) and CI workflow 41174192276 completed successfully for
+  the release commit. All three archives were downloaded from that run and passed
+  checksum, PE/Mach-O architecture, bundle metadata and internal build-fingerprint
+  validation before upload.
+- The public release endpoint and remote tag were verified after publication.
+  Signing, notarization, clean-machine installation, macOS GUI launch and real
+  Claude/Codex sessions remain outstanding, so Milestone E is still open.
+
 The next acceptance checks cover Milestones B–D in the native window, installer
 lifecycle, and the corrected macOS/Windows artifact workflow. Advanced search
 filters, full textual diff rendering, GUI editing of all repository settings,
