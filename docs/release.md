@@ -1,7 +1,9 @@
 # Development packaging and release checklist
 
-There is no published ContextForge release. Crates.io publication is disabled;
-package name availability and a multi-crate publishing plan remain unverified.
+The desktop release channel is an unsigned developer prerelease, not a stable
+production distribution. See [GitHub releases](https://github.com/MohamedRF/ContextForge/releases)
+for downloadable artifacts and release-specific validation. Crates.io publication
+is disabled; registry availability and a multi-crate publishing plan remain unverified.
 Use `cargo install --path crates/contextforge-cli --locked` for a source install.
 
 ## Local package preparation
@@ -35,11 +37,12 @@ a clean-machine install.
 `.github/workflows/package.yml` is a manually dispatched preparation workflow
 with read-only repository permissions. It runs quality gates, builds/tests each
 runner's native package and uploads development artifacts with checksums. It has
-no release/tag/publish step. The new workflow has been linted locally but has
-**not run on GitHub**. Windows GNU packaging was exercised locally; Linux,
-Linux ARM64, macOS ARM64 and Intel packaging remain unverified. The initial
-workflow covers the three default hosted OS runners; ARM Linux and Intel macOS
-need dedicated tested runner entries before claiming those targets.
+no release/tag/publish step. This separate CLI preparation workflow has not been
+dispatched; the desktop artifact workflow also prepares and smoke-tests CLI ZIPs
+on its Windows/MSVC, macOS ARM64 and macOS Intel runners. Consult each release's
+linked workflow run for the exact source commit and results. Windows GNU packaging
+was also exercised locally. Linux/ARM Linux packages are not desktop release
+targets; Linux CI checks do not imply a published or installed Linux desktop build.
 
 ## Release gates
 
@@ -63,5 +66,17 @@ schema. For rollback, restore the compatible private cache backup or configure a
 fresh cache and reindex sources with the older binary. Do not downgrade schema
 metadata manually. Restart the harness and verify a cited search result.
 
-The unreleased changelog is the development release note. No stable-release,
-upgrade-compatibility or signed-binary guarantee is currently made.
+`.github/workflows/desktop.yml` builds Windows x64, macOS ARM64 and macOS Intel
+from a single commit. It runs Rust/frontend quality gates, smoke-tests extracted
+CLI packages, builds native desktop bundles and produces SHA-256 sidecars. macOS
+application ZIPs use Apple's native `ditto` packaging tool. Artifacts are published
+only after checking the run and matching the release tag to its exact source SHA.
+The desktop installer does not add the independent CLI to PATH; extract the CLI
+ZIP separately and select its stable executable in the integration manager.
+
+No Developer ID/Authenticode credentials or updater endpoint are configured.
+macOS GUI launch, notarization, clean-machine installation/uninstallation, and
+real Claude/Codex harness sessions are separate gates from successful CI builds.
+See [desktop guide](desktop-user-guide.md) and [task tracker](../TASKS.md) for
+current feature and validation limits. No stable-release, upgrade-compatibility
+or signed-binary guarantee is made for this preview.

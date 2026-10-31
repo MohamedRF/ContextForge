@@ -1,7 +1,7 @@
 use crate::{Change, ChangedRange, Error, Mode, snapshots::Snapshot};
 use contextforge_graph::{Graph, Node};
 use git2::{DiffOptions, Patch};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub(crate) fn compare(
     old: &Snapshot,
@@ -9,6 +9,7 @@ pub(crate) fn compare(
     mode: &Mode,
     old_graph: &Graph,
     new_graph: &Graph,
+    working_hunks: Option<&BTreeMap<String, Vec<ChangedRange>>>,
 ) -> Result<Vec<Change>, Error> {
     let paths: BTreeSet<_> = old.keys().chain(new.keys()).collect();
     let mut changes = Vec::new();
@@ -29,9 +30,6 @@ pub(crate) fn compare(
         {
             continue;
         }
-        if changes.len() == 100 {
-            return Err(Error::Limit);
-        }
         let skipped = before
             .and_then(|file| file.reason)
             .or_else(|| after.and_then(|file| file.reason));
@@ -46,6 +44,16 @@ pub(crate) fn compare(
                     new_start: 1,
                     new_lines: new_text.lines().count(),
                 });
+            } else if let Some(working_hunks) = working_hunks {
+                hunks = working_hunks
+                    .get(path)
+                    .ok_or(Error::SnapshotChanged)?
+                    .clone();
+                // Git's built-in text conversion can make LF index / CRLF worktree
+                // bytes equivalent. Keep raw captured bytes for parser provenance.
+                if hunks.is_empty() && before.is_some() && after.is_some() {
+                    continue;
+                }
             } else {
                 let mut options = DiffOptions::new();
                 options.context_lines(0).interhunk_lines(0);
@@ -80,6 +88,9 @@ pub(crate) fn compare(
         } else {
             affected(new_graph, path, &hunks, false)
         };
+        if changes.len() == 100 {
+            return Err(Error::Limit);
+        }
         changes.push(Change {
             old_path: before.map(|_| path.clone()),
             new_path: after.map(|_| path.clone()),

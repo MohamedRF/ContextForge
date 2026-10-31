@@ -48,6 +48,69 @@ fn write_fixture(temp: &tempfile::TempDir, git: &GitRepository) {
 }
 
 #[test]
+fn autocrlf_preserves_raw_evidence_but_ignores_checkout_only_changes() {
+    let (temp, git, repo) = setup();
+    git.config()
+        .unwrap()
+        .set_bool("core.autocrlf", true)
+        .unwrap();
+    write_fixture(&temp, &git);
+    for path in ["central.rs", "caller.rs", "test.rs"] {
+        let content = fs::read_to_string(temp.path().join(path)).unwrap();
+        fs::write(temp.path().join(path), content.replace('\n', "\r\n")).unwrap();
+    }
+    let index_before = fs::read(git.path().join("index")).unwrap();
+    assert!(
+        analyze(&repo, &Mode::Unstaged, 3, 100)
+            .unwrap()
+            .direct_changes
+            .is_empty()
+    );
+    fs::write(
+        temp.path().join("central.rs"),
+        "pub fn central() -> u8 { 2 }\r\n",
+    )
+    .unwrap();
+    let report = analyze(&repo, &Mode::Unstaged, 3, 100).unwrap();
+    assert_eq!(report.direct_changes.len(), 1);
+    assert_eq!(
+        report.direct_changes[0].new_path.as_deref(),
+        Some("central.rs")
+    );
+    assert!(
+        report
+            .heuristic_dependents
+            .iter()
+            .any(|visit| visit.node.path == "caller.rs")
+    );
+    assert_eq!(fs::read(git.path().join("index")).unwrap(), index_before);
+    assert!(
+        fs::read_to_string(temp.path().join("central.rs"))
+            .unwrap()
+            .ends_with("\r\n")
+    );
+}
+
+#[test]
+fn explicit_no_text_conversion_keeps_line_ending_changes_visible() {
+    let (temp, git, repo) = setup();
+    git.config()
+        .unwrap()
+        .set_bool("core.autocrlf", true)
+        .unwrap();
+    fs::write(temp.path().join(".gitattributes"), "*.rs -text\n").unwrap();
+    write_fixture(&temp, &git);
+    let path = temp.path().join("central.rs");
+    fs::write(&path, "pub fn central() -> u8 { 1 }\r\n").unwrap();
+    let report = analyze(&repo, &Mode::Unstaged, 3, 100).unwrap();
+    assert_eq!(report.direct_changes.len(), 1);
+    assert_eq!(
+        report.direct_changes[0].new_path.as_deref(),
+        Some("central.rs")
+    );
+}
+
+#[test]
 fn central_edit_maps_both_symbols_and_direct_indirect_test_dependents_without_writes() {
     let (temp, git, repo) = setup();
     write_fixture(&temp, &git);

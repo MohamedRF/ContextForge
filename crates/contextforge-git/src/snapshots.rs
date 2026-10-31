@@ -1,7 +1,11 @@
-use crate::{Error, Mode};
+use crate::{ChangedRange, Error, Mode};
 use contextforge_core::Repository;
 use git2::{ObjectType, Oid, Repository as GitRepository};
-use std::{collections::BTreeMap, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::Path,
+    time::Instant,
+};
 
 /// Source selected from Git or the bounded working tree. Unsupported content stays explicit.
 pub(crate) struct Source {
@@ -10,6 +14,111 @@ pub(crate) struct Source {
     pub revision: Option<Oid>,
 }
 pub(crate) type Snapshot = BTreeMap<String, Source>;
+
+/// Let libgit2 apply its own index/worktree conversion policy in one bounded diff.
+/// Never normalize captured source or invoke external diff/filter commands.
+pub(crate) fn working_hunks(
+    repository: &Repository,
+    git: &GitRepository,
+    old: &Snapshot,
+    new: &Snapshot,
+    deadline: Instant,
+) -> Result<BTreeMap<String, Vec<ChangedRange>>, Error> {
+    let paths: BTreeSet<_> = old
+        .keys()
+        .chain(new.keys())
+        .filter(|path| {
+            let before = old.get(*path);
+            let after = new.get(*path);
+            before.and_then(|file| file.reason).is_none()
+                && after.and_then(|file| file.reason).is_none()
+                && before.and_then(|file| file.text.as_ref())
+                    != after.and_then(|file| file.text.as_ref())
+        })
+        .cloned()
+        .collect();
+    let mut result: BTreeMap<_, Vec<ChangedRange>> = paths
+        .iter()
+        .cloned()
+        .map(|path| (path, Vec::new()))
+        .collect();
+    if paths.is_empty() {
+        return Ok(result);
+    }
+    let mut index = git.index()?;
+    index.read(true)?;
+    if index.has_conflicts() {
+        return Err(Error::Conflict);
+    }
+    if index.len() > 10_000 {
+        return Err(Error::Limit);
+    }
+    let mut options = git2::DiffOptions::new();
+    options
+        .context_lines(0)
+        .interhunk_lines(0)
+        .disable_pathspec_match(true)
+        .include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .show_untracked_content(true)
+        .force_text(true)
+        .ignore_submodules(true)
+        .max_size(repository.config.max_file_bytes as i64);
+    for path in &paths {
+        if index.get_path(Path::new(path), 0).map(|entry| entry.id)
+            != old.get(path).and_then(|file| file.revision)
+        {
+            return Err(Error::SnapshotChanged);
+        }
+        options.pathspec(path);
+    }
+    let diff = git.diff_index_to_workdir(Some(&index), Some(&mut options))?;
+    for (position, delta) in diff.deltas().enumerate() {
+        if Instant::now() > deadline {
+            return Err(Error::TimeBudget);
+        }
+        let path = delta
+            .new_file()
+            .path()
+            .or_else(|| delta.old_file().path())
+            .and_then(Path::to_str)
+            .ok_or(Error::NonUtf8Path)?
+            .to_owned();
+        let hunks = result.get_mut(&path).ok_or(Error::SnapshotChanged)?;
+        if let Some(patch) = git2::Patch::from_diff(&diff, position)? {
+            if patch.num_hunks() > 1000 {
+                return Err(Error::Limit);
+            }
+            for hunk_index in 0..patch.num_hunks() {
+                let (hunk, _) = patch.hunk(hunk_index)?;
+                hunks.push(ChangedRange {
+                    old_start: hunk.old_start() as usize,
+                    old_lines: hunk.old_lines() as usize,
+                    new_start: hunk.new_start() as usize,
+                    new_lines: hunk.new_lines() as usize,
+                });
+            }
+        }
+    }
+    // A second authorized read binds the Git ranges to the captured source. Fail
+    // explicitly if a concurrent edit or link replacement invalidated that evidence.
+    for path in paths {
+        if Instant::now() > deadline {
+            return Err(Error::TimeBudget);
+        }
+        if let Some(expected) = new.get(&path).and_then(|file| file.text.as_deref()) {
+            if repository.read_source(Path::new(&path))? != expected {
+                return Err(Error::SnapshotChanged);
+            }
+        } else {
+            match std::fs::symlink_metadata(repository.root().join(path)) {
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                _ => return Err(Error::SnapshotChanged),
+            }
+        }
+    }
+    Ok(result)
+}
 
 pub(crate) fn capture(
     repository: &Repository,

@@ -46,3 +46,6 @@ Changes will be recorded here before each release. There are no published releas
 - Add Windows/macOS artifact workflows, checksums, architecture and user guides.
 - This is an unsigned developer preview. Signing, notarization and full production
   acceptance are not claimed; see release notes for actual validation evidence.
+- Respect Git's CRLF/text-attribute conversion during unstaged impact analysis
+  while retaining raw source fingerprints and detecting raced snapshots.
+- Avoid Tailwind utility-name collisions in sidebar and source-outline styles.

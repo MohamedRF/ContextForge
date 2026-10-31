@@ -249,7 +249,7 @@ export function App() {
             </>
           )}
           <button
-            className="collapse"
+            className="sidebar-collapse"
             aria-label="Toggle sidebar"
             onClick={() => setCollapsed(!collapsed)}
           >

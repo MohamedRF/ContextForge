@@ -28,7 +28,12 @@ def main():
             destination = output / f"ContextForge-{version}-{target}.app.zip"
             if destination.exists():
                 raise RuntimeError("refusing to overwrite an existing app archive")
-            shutil.make_archive(str(destination)[:-4], "zip", path.parent, path.name)
+            # Apple's distribution guidance uses ditto so app-bundle metadata,
+            # executable modes and symbolic links survive ZIP packaging.
+            subprocess.run(
+                ["ditto", "-c", "-k", "--keepParent", str(path), str(destination)],
+                check=True, timeout=120,
+            )
             artifacts.append(destination)
     if not artifacts:
         raise RuntimeError("no native desktop bundles found")

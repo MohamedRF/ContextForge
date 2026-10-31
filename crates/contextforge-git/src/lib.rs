@@ -15,6 +15,8 @@ use std::{
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Git index or source changed during analysis; retry to capture consistent evidence")]
+    SnapshotChanged,
     #[error("Git repository is missing or does not match the authorized root")]
     Repository,
     #[error("unable to inspect Git snapshots; verify refs and repository state")]
@@ -56,7 +58,7 @@ pub struct Change {
     pub current_symbols: Vec<Node>,
     pub skipped: Option<&'static str>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ChangedRange {
     pub old_start: usize,
     pub old_lines: usize,
@@ -114,7 +116,21 @@ pub fn analyze(
     let new_outlines = parse_snapshot(&new, &repository_id, deadline)?;
     let old_graph = Graph::from_outlines(&old_outlines)?;
     let new_graph = Graph::from_outlines(&new_outlines)?;
-    let direct_changes = changes::compare(&old, &new, mode, &old_graph, &new_graph)?;
+    let working_hunks = if matches!(mode, Mode::Unstaged) {
+        Some(snapshots::working_hunks(
+            repository, &git, &old, &new, deadline,
+        )?)
+    } else {
+        None
+    };
+    let direct_changes = changes::compare(
+        &old,
+        &new,
+        mode,
+        &old_graph,
+        &new_graph,
+        working_hunks.as_ref(),
+    )?;
     if Instant::now() > deadline {
         return Err(Error::TimeBudget);
     }

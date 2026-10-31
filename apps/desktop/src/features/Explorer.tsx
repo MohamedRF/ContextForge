@@ -77,7 +77,7 @@ export function Explorer({
               <h3 className="mono">{path}</h3>
               <span className="badge">Current source · read only</span>
             </div>
-            <div className="outline">
+            <div className="symbol-outline">
               {source.data.outline.symbols.map((symbol) => (
                 <button
                   className="small"

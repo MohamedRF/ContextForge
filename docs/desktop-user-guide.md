@@ -5,6 +5,17 @@ the standalone CLI and `contextforge mcp` stdio server. Core features require no
 account, HTTP server or cloud provider. This is an unsigned developer preview,
 not a signed production distribution. See the release's platform evidence.
 
+## Actual Windows preview
+
+These captures come from an installed Windows developer build, using a disposable
+Unicode-path fixture and the real shared Rust backend. They are not mockups.
+
+![Native Windows dashboard](images/desktop-dashboard.jpg)
+
+![Cited native search results](images/desktop-search.jpg)
+
+![Dependency traversal in the installed application](images/desktop-dependencies.jpg)
+
 ## Install
 
 Download the artifact matching your operating system and architecture and verify
