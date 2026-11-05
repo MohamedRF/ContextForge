@@ -15,9 +15,11 @@
 - Path containment does not eliminate hostile concurrent replacement races.
   Windows cache ACL/hard-link checks and strict peer/process resource quotas are
   incomplete. See [the threat model](security.md).
-- Setup is preview-only. No automatic harness configuration merge, backup or
-  modification is implemented. Generated formats/launch descriptors are tested;
-  actual agent-session calls are unverified. See [integrations](integrations.md).
+- CLI `setup` is preview-only; it never reads or writes harness configuration.
+  The desktop Integrations tab can preview, back up, and atomically apply or
+  remove the ContextForge entry after native confirmation. Generated formats
+  are parser-tested; actual agent-session calls remain unverified.
+  See [integrations](integrations.md).
 - Current-source CI passed on Windows, Linux and macOS for the desktop preview
   commit. Local Windows GUI/package evidence does not establish macOS GUI,
   clean-machine or installer-lifecycle behavior.

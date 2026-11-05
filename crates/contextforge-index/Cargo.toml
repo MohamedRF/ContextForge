@@ -7,7 +7,10 @@ publish.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 description = "Transactional incremental SQLite source snapshots for ContextForge"
+keywords = ["sqlite", "indexing", "code-intelligence"]
+categories = ["development-tools"]
 
 [dependencies]
 contextforge-core = { path = "../contextforge-core" }

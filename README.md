@@ -28,6 +28,12 @@ and reviewed MCP configuration changes. See the [desktop guide](docs/desktop-use
 and [architecture](docs/desktop-architecture.md). Unsigned previews are not signed
 production releases; installation and platform validation are recorded per release.
 
+![Desktop dashboard](docs/images/desktop-dashboard.jpg)
+
+![Search results](docs/images/desktop-search.jpg)
+
+![Dependencies](docs/images/desktop-dependencies.jpg)
+
 Developer workflow (Node 24 and Tauri platform prerequisites required):
 
 ```text
@@ -63,7 +69,7 @@ ContextForge gives coding tools a repeatable view of a local source tree. It dis
 | Git changed ranges and likely impact | Implemented; old/new source evidence, no safety verdict |
 | Token-budgeted context packing | Implemented; explicit serialized JSON estimator |
 | Structural knowledge status/clear/rebuild | Implemented; hash validation and transactional lifecycle |
-| Harness configuration previews | Implemented for Claude Code, Codex, Cursor and VS Code; manual merge only |
+| Harness configuration | Implemented for Claude Code, Codex, Cursor and VS Code; CLI `setup` is preview-only, desktop can back up and atomically apply or remove entries |
 | Prebuilt releases | Published as an unsigned desktop developer preview; source installs remain supported |
 
 ## Quick start
@@ -107,7 +113,7 @@ Reindexing the unchanged fixture returns:
 {"schema_version":2,"added":0,"modified":0,"unchanged":1,"deleted":0,"total_files":1,"parsed_files":0,"partial_files":0}
 ```
 
-Eligible files are read and hashed on each run. Only changed database rows are written. Renames are handled as deletion plus addition. Status reports `freshness: "not_checked"`; it does not assert that cached source still matches the working tree.
+Eligible files are read and hashed on each run. Only changed database rows are written. Renames are handled as deletion plus addition. Status reports `freshness: "not_checked"`; it does not assert that cached source still matches the working tree. Run `doctor` or `memory status` for read-only hash validation (`validated_at_read` or `stale`).
 
 ## CLI reference
 
@@ -118,7 +124,7 @@ Eligible files are read and hashed on each run. Only changed database rows are w
 | `contextforge init` | Create managed configuration without overwriting existing config |
 | `contextforge index` | Create or incrementally update source snapshots |
 | `contextforge status` | Inspect configuration and stored index metadata |
-| `contextforge doctor` | Check root/config access, discovery, and index metadata |
+| `contextforge doctor` | Check root/config access, discovery, index metadata, and read-only freshness validation (`memory status` hashes) |
 | `contextforge project-map --limit 100` | List eligible source files |
 | `contextforge analyze <relative-file> --limit 200` | Outline current source syntax |
 | `contextforge search <query> --limit 20 --offset 0` | Search indexed symbols, filenames and source text |

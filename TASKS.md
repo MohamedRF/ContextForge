@@ -59,3 +59,35 @@ lifecycle, and the corrected macOS/Windows artifact workflow. Advanced search
 filters, full textual diff rendering, GUI editing of all repository settings,
 automatic stale-index detection and richer operation history remain tracked work;
 the first desktop release is explicitly a developer preview.
+
+### Improvement batch — verified on Windows, 5 November 2026 (Milestones still open)
+
+- `doctor` now includes a read-only freshness probe (`memory status` hashes)
+  under `knowledge` in JSON output and a validated/stale summary in text
+  output. `status` output is unchanged. A new CLI regression test verifies
+  validated → stale → read-only behavior.
+- `benchmarks/run.py` measures peak RSS and CPU time on Unix via
+  `resource.getrusage(RUSAGE_CHILDREN)` (Linux KiB → bytes, macOS bytes),
+  replacing null fields. `docs/benchmarking.md` updated. Windows 4-file
+  smoke run passes; Unix execution not run on this host.
+- Crate metadata completed for crates.io readiness (descriptions, keywords,
+  categories, `authors`/`repository`/`homepage`) in all `crates/*/Cargo.toml`.
+- Docs clarified: CLI `setup` is preview-only, desktop Integrations can back up
+  and atomically apply/remove entries. `README.md` capability table, doctor
+  description, freshness note, `docs/integrations.md`, `docs/known-limits.md`,
+  and `CHANGELOG.md` updated; README now embeds `docs/images/` screenshots.
+- Desktop `api.ts` mirrors Rust bounds client-side (`clampBudget`,
+  `clampDepth`, `clampOffset`, `normalizeQuery`/`normalizeSelector`/
+  `normalizePath`) and hardens `errorMessage()` for Tauri errors. New
+  `api.test.ts` adds validation tests.
+
+Checks performed on Windows x86_64 GNU (Rust 1.99.1, Node 24): `cargo fmt
+--all -- --check`, `cargo clippy --workspace --all-targets --locked -- -D
+warnings`, `cargo test --workspace --locked` (84 tests), `cargo build
+--workspace --release --locked`, `npm run typecheck`, `npm run lint`,
+`npm run test` (9 tests), `npm run build`, `python -m py_compile`
+benchmark/package scripts, and a 4-file 1-repeat benchmark smoke (exit 0,
+usage fields present). Unavailable on this host: Unix/macOS benchmark
+execution, macOS GUI launch, clean-machine installer test, signing/
+notarization, and real Claude/Codex/Cursor/VS Code sessions. No milestone
+checkbox is marked done; Milestones B–E remain open.

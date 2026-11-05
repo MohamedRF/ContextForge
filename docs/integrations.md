@@ -23,8 +23,16 @@ Before applying manually, back up the destination. Merge only the `contextforge`
 entry, preserve other servers/settings and review a conflicting existing entry.
 For Codex, add the table once; duplicate TOML tables are invalid. For JSON, merge
 into the existing server object, rather than appending a second JSON document.
-Restore the backup to roll back, or remove only the added entry. Automatic merge,
-backup and modification are not implemented.
+Restore the backup to roll back, or remove only the added entry. The CLI never
+performs this merge itself.
+
+The desktop Integrations tab uses the same preview service plus reviewed
+apply/remove: it shows the destination, requires native confirmation, checks
+that the destination still matches the preview, writes a private backup, and
+atomically replaces the file while preserving unrelated entries. Close any
+non-cooperating writer first; concurrent editors can still race the replacement.
+Either path preserves unrelated servers; only the `contextforge` entry is added,
+replaced, or removed.
 
 ## Formats and verification
 

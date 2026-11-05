@@ -84,6 +84,50 @@ fn unicode_init_status_doctor_and_map() {
 }
 
 #[test]
+fn doctor_reports_validated_then_stale_freshness() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("lib.rs"), "fn original() {}\n").unwrap();
+    for command in ["init", "index"] {
+        let output = run(temp.path(), &["--root", ".", "--json", command]);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let output = run(temp.path(), &["--root", ".", "--json", "doctor"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["knowledge"]["freshness"], "validated_at_read");
+    assert_eq!(value["knowledge"]["state"], "ready");
+    // Doctor must be read-only: source and knowledge state are unchanged.
+    fs::write(temp.path().join("lib.rs"), "fn changed() {}\n").unwrap();
+    let output = run(temp.path(), &["--root", ".", "--json", "doctor"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["knowledge"]["freshness"], "stale");
+    assert_eq!(value["knowledge"]["changed_or_removed"], 1);
+    // Human output distinguishes snapshot freshness from hash validation.
+    let output = run(temp.path(), &["--root", ".", "doctor"]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("snapshot freshness not checked"));
+    assert!(stdout.contains("stale"));
+    assert_eq!(
+        fs::read_to_string(temp.path().join("lib.rs")).unwrap(),
+        "fn changed() {}\n"
+    );
+}
+
+#[test]
 fn analyze_current_source_json_human_and_invalid_paths() {
     let temp = tempdir().unwrap();
     fs::write(temp.path().join("源.rs"), "pub fn café() {}\n").unwrap();

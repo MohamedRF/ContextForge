@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import platform
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -37,8 +38,34 @@ def windows_usage(process):
             "cpu_seconds": (ticks(times[2]) + ticks(times[3])) / 10_000_000}
 
 
+def _rustest_children():
+    import resource
+    return resource.getrusage(resource.RUSAGE_CHILDREN)
+
+
+def unix_usage(before):
+    """Process resource usage on Unix via RUSAGE_CHILDREN.
+
+    cpu_seconds is the delta for this child (utime+stime); peak_rss_bytes is the
+    peak of the largest waited child so far. ru_maxrss is KiB on Linux, bytes on
+    macOS. Returns None fields when resource data is unavailable.
+    """
+    try:
+        import resource
+        after = _rustest_children()
+    except Exception:
+        return {"peak_rss_bytes": None, "cpu_seconds": None}
+    cpu_seconds = (after.ru_utime - before.ru_utime) + (after.ru_stime - before.ru_stime)
+    if cpu_seconds < 0:
+        cpu_seconds = 0.0
+    multiplier = 1024 if sys.platform.startswith("linux") else 1
+    return {"peak_rss_bytes": after.ru_maxrss * multiplier,
+            "cpu_seconds": cpu_seconds}
+
+
 def invoke(binary, root, args):
     started = time.perf_counter()
+    usage_before = _rustest_children() if os.name != "nt" else None
     # File-backed pipes avoid output deadlocks while keeping process memory separate.
     with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as errors:
         process = subprocess.Popen([str(binary), "--root", str(root), "--json", *args],
@@ -50,8 +77,10 @@ def invoke(binary, root, args):
             process.wait()
             raise RuntimeError("benchmark command exceeded 120 seconds") from None
         elapsed = time.perf_counter() - started
-        usage = windows_usage(process) if os.name == "nt" else {
-            "peak_rss_bytes": None, "cpu_seconds": None}
+        if os.name == "nt":
+            usage = windows_usage(process)
+        else:
+            usage = unix_usage(usage_before)
         usage["cpu_percent_one_core"] = (
             usage["cpu_seconds"] / elapsed * 100 if usage["cpu_seconds"] is not None else None)
         output.seek(0)
@@ -145,7 +174,7 @@ def main():
                       "python": platform.python_version(), "logical_cpus": os.cpu_count(),
                       "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
                       "binary_version": subprocess.check_output([str(binary), "--version"], text=True).strip(),
-                      "measurement": "fresh CLI process wall time including startup; Windows process peak working set and kernel+user CPU time; resource metrics null on other OSes",
+                      "measurement": "fresh CLI process wall time including startup; Windows GetProcessMemoryInfo/GetProcessTimes, Unix resource.getrusage(RUSAGE_CHILDREN) for peak RSS and CPU time",
                       "records": records}, indent=2))
 
 

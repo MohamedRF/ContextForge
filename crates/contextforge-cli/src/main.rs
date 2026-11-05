@@ -427,17 +427,38 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
         Command::Doctor => {
             let map = repository.project_map(100)?;
             let index = contextforge_index::status(&repository)?;
+            // Read-only freshness probe: compares observed source hashes with the
+            // stored snapshot. Never writes metadata and never refreshes the index.
+            let knowledge = match contextforge_index::memory::status(&repository) {
+                Ok(status) => serde_json::to_value(&status)?,
+                Err(error) => serde_json::json!({"state":"unavailable","error":error.to_string()}),
+            };
             if cli.json {
                 println!(
                     "{}",
-                    serde_json::json!({"ok":true,"status":repository.status(),"index":index,"source_files_sampled":map.files.len(),"truncated":map.truncated})
+                    serde_json::json!({"ok":true,"status":repository.status(),"index":index,"knowledge":knowledge,"source_files_sampled":map.files.len(),"truncated":map.truncated})
                 );
             } else {
+                let freshness = match &knowledge {
+                    value if value["state"] == "missing" => {
+                        "Index missing; run init and index.".to_string()
+                    }
+                    value if value["freshness"] == "validated_at_read" => {
+                        "Index freshness validated at read.".to_string()
+                    }
+                    value if value["freshness"] == "stale" => format!(
+                        "Index stale: {} added, {} changed/removed; run index to refresh.",
+                        value["added"], value["changed_or_removed"]
+                    ),
+                    value if value["state"] == "ready" => "Index readiness unknown.".to_string(),
+                    _ => "Freshness check unavailable.".to_string(),
+                };
                 println!(
-                    "Root and configuration OK. Source files sampled: {}. Index: {} ({} files; freshness not checked).",
+                    "Root and configuration OK. Source files sampled: {}. Index: {} ({} files; snapshot freshness not checked by retrieval).\n{}",
                     map.files.len(),
                     index.state,
-                    index.files
+                    index.files,
+                    freshness
                 );
             }
         }

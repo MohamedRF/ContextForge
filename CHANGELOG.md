@@ -4,6 +4,15 @@ Changes are recorded here before each release. The first desktop developer previ
 was published on 31 October 2026 as
 [`v0.1.0-desktop-preview.1`](https://github.com/MohamedRF/ContextForge/releases/tag/v0.1.0-desktop-preview.1).
 
+## Unreleased
+
+- `doctor` reports read-only hash validation (`validated_at_read`, `stale`, or
+  `missing`) under `knowledge` in JSON and a human summary in text output,
+  without refreshing the index.
+- Benchmarks measure peak RSS and CPU time on Linux/macOS via
+  `resource.getrusage`; crate metadata completed; docs clarify CLI preview vs
+  desktop apply; desktop adapter mirrors Rust bounds client-side.
+
 ## 0.1.0 — published as v0.1.0-desktop-preview.1
 
 ### Added
@@ -31,7 +40,7 @@ was published on 31 October 2026 as
 ### Limitations
 
 - Context token counts use an explicit estimate, not a model tokenizer; syntax dependencies do not prove semantic binding or change safety.
-- No published crates or actual harness-session verification. Published binaries are an unsigned developer preview; setup is preview-only and requires manual merge.
+- No published crates or actual harness-session verification. Published binaries are an unsigned developer preview; CLI `setup` is preview-only, while the desktop Integrations tab can back up and atomically apply or remove entries.
 - Ordinary status/search/graph/context use labeled captured snapshots; memory status validates observed source hashes. Hostile filesystem/cache, Windows permissions/hard links and process quotas remain open; local cargo-audit reports no known advisories at the recorded database revision.
 
 

@@ -61,11 +61,11 @@ Median wall time in milliseconds:
 | 100 | 256.06 | 128.94 | 143.08 | 33.64 | 83.15 | 35.03 | 36.24 |
 | 1000 | 3297.53 | 965.87 | 998.49 | 35.04 | 493.83 | 54.35 | 55.97 |
 
-Windows resource metrics use native GetProcessMemoryInfo/GetProcessTimes after
-each child exits: peak working set and kernel+user CPU time. CPU percent in the
-raw report is CPU seconds / wall seconds × 100, relative to one logical core;
-it is not total-machine CPU utilization. Non-Windows resource fields are `null`
-until an equivalent measured backend is added.
+Resource metrics use native GetProcessMemoryInfo/GetProcessTimes on Windows
+after each child exits, and `resource.getrusage(RUSAGE_CHILDREN)` on Unix:
+peak RSS (KiB on Linux converted to bytes, bytes on macOS) and kernel+user
+CPU time. CPU percent in the raw report is CPU seconds / wall seconds × 100,
+relative to one logical core; it is not total-machine CPU utilization.
 
 | Files | Maximum cold-index peak working set | Median cold CPU seconds | First-trial index bytes |
 |---|---:|---:|---:|

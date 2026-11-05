@@ -7,7 +7,10 @@ publish.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 description = "Root-scoped configuration and bounded source discovery for ContextForge"
+keywords = ["code-intelligence", "offline", "discovery"]
+categories = ["development-tools"]
 
 [dependencies]
 serde.workspace = true
