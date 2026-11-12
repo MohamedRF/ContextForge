@@ -117,6 +117,7 @@ impl ContextForge {
         annotations(
             read_only_hint = true,
             destructive_hint = false,
+            idempotent_hint = true,
             open_world_hint = false
         ),
         description = "Pack cited captured source using symbol/FTS retrieval, deduplication, file diversity and bounded heuristic graph neighbors. Counts compact package JSON with an explicit UTF-8 bytes/4 estimate, not exact model tokens. Snapshot freshness unchecked; no index writes or execution. MCP envelope is outside the package budget. Optional Git proximity is read-only."
@@ -161,6 +162,7 @@ impl ContextForge {
         annotations(
             read_only_hint = true,
             destructive_hint = false,
+            idempotent_hint = true,
             open_world_hint = false
         ),
         description = "Read-only Git impact: default index-to-working-tree, staged HEAD-to-index, base merge-base-to-head, or explicit relative file. Returns old/new changed symbols, bounded heuristic dependents, test candidates and unknown evidence. No shell, tests, external diff or index refresh; never proves a change safe."
@@ -200,6 +202,7 @@ impl ContextForge {
         annotations(
             read_only_hint = true,
             destructive_hint = false,
+            idempotent_hint = true,
             open_world_hint = false
         ),
         description = "Bounded syntax dependency graph from the captured index. Contains edges are syntactically resolved; calls/imports are heuristic or unknown, never compiler-proven. Incoming follows likely dependents. Snapshot freshness is unchecked. No indexing or shell execution."
@@ -235,6 +238,7 @@ impl ContextForge {
         annotations(
             read_only_hint = true,
             destructive_hint = false,
+            idempotent_hint = true,
             open_world_hint = false
         ),
         description = "Find candidate callers/references in captured syntax. Results distinguish heuristic targets from matching unresolved occurrences. No claim of complete semantic reference resolution; no source/index writes."
@@ -257,6 +261,7 @@ impl ContextForge {
         annotations(
             read_only_hint = true,
             destructive_hint = false,
+            idempotent_hint = true,
             open_world_hint = false
         ),
         description = "Offline search of an explicitly captured index snapshot. Exact/qualified symbol and filename matches, prefix symbols and literal FTS5 phrase retrieval, with cited spans and clipped snippets. Freshness is not checked; run CLI index separately to refresh. No hidden indexing or source writes."
@@ -300,6 +305,7 @@ impl ContextForge {
         annotations(
             read_only_hint = true,
             destructive_hint = false,
+            idempotent_hint = true,
             open_world_hint = false
         ),
         description = "Current-file symbol outline for an eligible Rust, Python, TypeScript or JavaScript file. Returns relative path, definition spans and parent IDs; imports/exports/calls have unknown targets. Tree-sitter syntax only, no semantic binding. No index writes."
@@ -342,6 +348,7 @@ impl ContextForge {
         annotations(
             read_only_hint = true,
             destructive_hint = false,
+            idempotent_hint = true,
             open_world_hint = false
         ),
         description = "Read-only bounded inventory of Rust, Python, TypeScript and JavaScript UTF-8 source files under the configured root. Honors ignore rules; reports truncation. No symbol or dependency analysis."

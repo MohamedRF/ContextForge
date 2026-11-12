@@ -91,3 +91,26 @@ usage fields present). Unavailable on this host: Unix/macOS benchmark
 execution, macOS GUI launch, clean-machine installer test, signing/
 notarization, and real Claude/Codex/Cursor/VS Code sessions. No milestone
 checkbox is marked done; Milestones B–E remain open.
+
+### MCP annotation fix — verified on Windows, 12 November 2026 (Milestones still open)
+
+- All seven MCP tools now emit an explicit `idempotentHint` annotation
+  (`true`) alongside the existing `readOnlyHint`/`destructiveHint`/
+  `openWorldHint`. Handler tracing showed every tool is read-only with no
+  side effects on repeat calls: context packing, Git impact, graph
+  traversal, reference search, index search, symbol outlines and the
+  project map all run on read-only SQLite connections, in-memory graph
+  construction, libgit2 read-only access and read-only filesystem walks.
+  A changing captured snapshot does not make a read non-idempotent.
+- The stdio `tools/list` integration test
+  (`stdout_is_protocol_only_and_eof_exits_cleanly`) now asserts explicit
+  boolean `readOnlyHint`, `destructiveHint`, `idempotentHint` and
+  `openWorldHint` values for all seven tools. Tool names, descriptions,
+  schemas, handler behavior and other annotations are unchanged.
+
+Checks performed on Windows x86_64 GNU (Rust 1.99.1, Node 24): `cargo fmt
+--all -- --check`, `cargo clippy --workspace --all-targets --locked -- -D
+warnings`, `cargo test --workspace --locked` (all pass, 4 MCP stdio tests),
+`cargo build --workspace --release --locked`, `npm run typecheck`,
+`npm run lint`, `npm run test` (9 tests) and `npm run build`. Not run:
+macOS/Linux validation and the other M8ven findings (out of scope).

@@ -251,6 +251,19 @@ async fn official_client_searches_persisted_snapshot_without_writes() {
     .expect("search MCP test timed out");
 }
 
+// All seven tools are read-only with no side effects on repeat calls, so each
+// emits explicit boolean hints. A changing snapshot does not make a read non-idempotent.
+const EXPECTED_TOOL_ANNOTATIONS: &[(&str, bool, bool, bool, bool)] = &[
+    // name, readOnlyHint, destructiveHint, idempotentHint, openWorldHint
+    ("pack_context", true, false, true, false),
+    ("analyze_change", true, false, true, false),
+    ("dependency_graph", true, false, true, false),
+    ("find_references", true, false, true, false),
+    ("search_context", true, false, true, false),
+    ("symbol_lookup", true, false, true, false),
+    ("project_map", true, false, true, false),
+];
+
 #[tokio::test]
 async fn stdout_is_protocol_only_and_eof_exits_cleanly() {
     tokio::time::timeout(Duration::from_secs(20), async {
@@ -276,7 +289,19 @@ async fn stdout_is_protocol_only_and_eof_exits_cleanly() {
             assert_eq!(message["jsonrpc"], "2.0");
             assert_ne!(message["id"], 9);
             if message["id"] == 2 {
-                assert!(message["result"]["tools"].as_array().unwrap().iter().any(|tool| tool["name"] == "project_map"));
+                let tools = message["result"]["tools"].as_array().unwrap();
+                assert_eq!(tools.len(), EXPECTED_TOOL_ANNOTATIONS.len());
+                for &(name, read_only, destructive, idempotent, open_world) in EXPECTED_TOOL_ANNOTATIONS {
+                    let tool = tools
+                        .iter()
+                        .find(|tool| tool["name"] == name)
+                        .unwrap_or_else(|| panic!("missing tool {name}"));
+                    let annotations = &tool["annotations"];
+                    assert_eq!(annotations["readOnlyHint"].as_bool(), Some(read_only), "{name} readOnlyHint");
+                    assert_eq!(annotations["destructiveHint"].as_bool(), Some(destructive), "{name} destructiveHint");
+                    assert_eq!(annotations["idempotentHint"].as_bool(), Some(idempotent), "{name} idempotentHint");
+                    assert_eq!(annotations["openWorldHint"].as_bool(), Some(open_world), "{name} openWorldHint");
+                }
                 break;
             }
         }
