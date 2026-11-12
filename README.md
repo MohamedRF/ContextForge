@@ -11,6 +11,7 @@ One local Rust engine with CLI, Desktop and MCP interfaces for repository intell
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust 1.99.1](https://img.shields.io/badge/Rust-1.99.1-orange.svg)](rust-toolchain.toml)
 [![Status: early development](https://img.shields.io/badge/Status-early%20development-yellow.svg)](docs/roadmap.md)
+[![M8ven Score](https://m8ven.ai/badge/mcp/mohamedrf-contextforge-1qf4fo?v=367e1e172ac996250a94ff2d313c2c39)](https://m8ven.ai/mcp/mohamedrf-contextforge-1qf4fo?s=readme)
 
 [Quick start](#quick-start) · [CLI](#cli-reference) · [MCP](#mcp-server) · [Architecture](docs/architecture.md) · [Roadmap](docs/roadmap.md)
 
